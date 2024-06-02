@@ -232,10 +232,10 @@ void SnakeGame::checkItem() {
         break;   
     case '3': //Growth
     snake.size() += 1;
-    score_growth++;
+    snake.push_back(Position());
         break;
     case '4': //Poison
-    snake.size() -= 1;
+    snake.pop_back();
     score_poison++;
         break;
     case '5': //Gate

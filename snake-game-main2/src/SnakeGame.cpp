@@ -288,12 +288,11 @@ void SnakeGame::updateItem() {
 
     if ((item_timer % 20) == 0) 
     {
-    m.makeitems(1);   // Growth
-    m.makeitems(2);   //Poison
-    m.makeitems(3);   //Speed
+        m.makeitems(1, snake);   // Growth
+        m.makeitems(2, snake);   // Poison
+        m.makeitems(3, snake);   // Speed
     }
     item_timer++;
-
 }
 
 void SnakeGame::scoreBoard()

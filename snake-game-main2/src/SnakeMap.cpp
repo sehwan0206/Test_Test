@@ -1,6 +1,6 @@
 #include "SnakeMap.h"
 #include <iostream>
-
+#include <vector>
 MapHandler::MapHandler() {
     map = {nullptr};
     g1 = Gate();
@@ -163,7 +163,7 @@ item MapHandler::getRandomitems() {
 
     std::uniform_int_distribution<int> itemY(1, maxHeight - 2);
     std::uniform_int_distribution<int> itemX(1, maxHeight - 2);
-    
+    int size = snake.size();
     while(true){
     int y {itemY(mt_item)};
     int x {itemX(mt_item)};
@@ -188,17 +188,17 @@ void MapHandler::makeitems(int a) {
     {
     case 1:
         putItem(Growth.y, Growth.x, '0');
-        Growth = getRandomitems();
+        Growth = getRandomitems(snake);
         putItem(Growth.y, Growth.x, '3');
         break;
     case 2:
         putItem(Poison.y, Poison.x, '0');
-        Poison = getRandomitems();
+        Poison = getRandomitems(snake);
         putItem(Poison.y, Poison.x, '4');
         break;
     case 3:
         putItem(Speed.y, Speed.x, '0');
-        Speed = getRandomitems();
+        Speed = getRandomitems(snake);
         putItem(Speed.y, Speed.x, '6');
         break;
     }

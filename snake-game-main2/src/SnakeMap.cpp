@@ -167,9 +167,9 @@ item MapHandler::getRandomitems() {
     while(true){
     int y {itemY(mt_item)};
     int x {itemX(mt_item)};
-   if(map[y][x]==0)  //check wall,item
+   if(map[y][x]=='0')  //check wall,item
    {
-    break;
+    return item{y,x};
    }
     }
 }

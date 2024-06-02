@@ -231,7 +231,7 @@ void SnakeGame::checkItem() {
     speed = 4*speed/5;
         break;   
     case '3': //Growth
-    snake.size() += 1;
+    score_growth++;
     snake.push_back(Position());
         break;
     case '4': //Poison

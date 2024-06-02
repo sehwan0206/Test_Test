@@ -173,7 +173,7 @@ item MapHandler::getRandomitems() {
     {
         if(snake[i].y!=y&&snake[i].x!=x)  //check body
         {
-            if(i==size-1)
+            if(i==snake.size()-1)
             {
                 break;
             }

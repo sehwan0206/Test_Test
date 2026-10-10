@@ -9,6 +9,7 @@ require(js('dictionary.js'));
 require(js('core.js'));
 require(js('similarity.js'));
 require(js('optimizer.js'));
+require(js('power.js'));
 require(js('sample-data.js'));
 const FM = globalThis.FM;
 const ST = FM.clone(FM.DEFAULT_SETTINGS);
@@ -266,4 +267,75 @@ test('기본 일정은 사진 일정표와 같고 모두 토·일이다', () => 
   assert.deepStrictEqual(byVenue('ttukseom'), ['2026-10-10~2026-10-11', '2026-10-31~2026-11-01']);
   assert.deepStrictEqual(byVenue('hwarangdae'), ['2026-10-17~2026-10-18', '2026-11-07~2026-11-08']);
   for (const e of st.events) assert.deepStrictEqual(e.days.map((d) => FM.weekday(d.date)), ['토', '일']);
+});
+
+// ---------------------------------------------------------------- 전력 분산 ---
+test('전력 숫자 읽기: 3 · 2.5kW · 3,000W · 1500 w', () => {
+  const p = FM.Power.parse;
+  assert.strictEqual(p('3'), 3);
+  assert.strictEqual(p('2.5kW'), 2.5);
+  assert.strictEqual(p('3,000W'), 3);
+  assert.strictEqual(p('1500 w'), 1.5);
+  assert.strictEqual(p(4), 4);
+  assert.strictEqual(p(''), '');
+  assert.strictEqual(p('모름'), '');
+  assert.strictEqual(p(0), '');
+});
+
+test('전력 구역 자동 나누기: 긴 방향을 따라 부스 수가 같은 띠로 나뉜다', () => {
+  const g = FM.generateShape('lines', 42, 2);
+  const L = Object.assign(FM.emptyLayout(g.rows, g.cols), { cells: g.cells });
+  assert.strictEqual(FM.Power.autoZones(L, 3), 3);
+  const cols = { A: [], B: [], C: [] };
+  for (const [k, c] of Object.entries(L.cells)) cols[c.zone].push(FM.parseKey(k)[1]);
+  assert.deepStrictEqual([cols.A.length, cols.B.length, cols.C.length], [14, 14, 14]);
+  assert.ok(Math.max(...cols.A) < Math.min(...cols.B) && Math.max(...cols.B) < Math.min(...cols.C));
+});
+
+function powerRun(withPower, caps) {
+  const farms = sampleFarms();
+  FM.SAMPLE_FARMS.forEach((row, i) => (farms[i].power = row[7] || ''));
+  const st = Object.assign(FM.clone(ST), { wPow: 0.5, wZone: 4 });
+  const L = layoutOf('lines', farms.length, 2);
+  FM.Power.autoZones(L, 3);
+  if (caps) L.zoneCaps = caps;
+  const keys = FM.boothKeys(L);
+  const { S, N1 } = FM.Sim.matrix(farms, st);
+  const opt = { cells: FM.Sim.boothCells(L, keys), S, N1, toPlace: farms.map((_, i) => i), fresh: true, st, seed: 21 };
+  if (withPower) {
+    FM.Power.addToMatrix(S, N1, farms, st);
+    const power = new Float64Array(N1);
+    farms.forEach((f, i) => (power[i] = FM.Power.kw(f)));
+    Object.assign(opt, { power, zone: FM.Power.zoneSetup(L, keys), wZone: st.wZone });
+  }
+  const res = FM.Opt.optimize(opt);
+  keys.forEach((k, i) => res.assign[i] >= 0 && (L.assign[k] = farms[res.assign[i]].id));
+  const byId = Object.fromEntries(farms.map((f) => [f.id, f]));
+  return { pr: FM.Power.report(L, byId, st), insp: FM.Sim.inspect(L, byId, st), L, byId, st };
+}
+
+test('자동 배치: 전력 구역 합계를 고르게 맞추면서 비슷한 품목 기준도 지킨다', () => {
+  const { pr, insp } = powerRun(true);
+  assert.ok(pr.count >= 8 && !pr.virtual);
+  assert.ok(pr.maxDev <= 0.15, `구역 편차 ${Math.round(pr.maxDev * 100)}%`);
+  assert.strictEqual(pr.hotPairs.length, 0);
+  assert.strictEqual(insp.counts.danger, 0);
+});
+
+test('자동 배치: 구역 용량을 넘지 않게 놓는다', () => {
+  const { pr } = powerRun(true, { A: 3, B: 20, C: 20 });
+  const a = pr.zones.find((z) => z.z === 'A');
+  assert.ok(a.load <= 3 + 1e-9, `A 구역 ${a.load}kW > 용량 3kW`);
+  assert.ok(!pr.zones.some((z) => z.over));
+});
+
+test('전력 검수: 발전기 용량을 넘으면 알려준다', () => {
+  const { L, pr, byId, st } = powerRun(true);
+  assert.ok(pr.total > 0 && !pr.genOver);
+  L.genCap = pr.total - 1;
+  const over = FM.Power.report(L, byId, st);
+  assert.strictEqual(over.genOver, true);
+  assert.strictEqual(over.level, 'danger');
+  L.genCap = pr.total + 5;
+  assert.strictEqual(FM.Power.report(L, byId, st).genOver, false);
 });

@@ -18,6 +18,7 @@
     { key: 'items', label: '신청품목', syn: ['신청품목', '판매품목', '주요품목', '취급품목', '품목', '판매상품', '상품'] },
     { key: 'isNew', label: '신규여부', syn: ['신규여부', '신규', '신규/기존', '신규기존'] },
     { key: 'place', label: '장소', syn: ['장소', '행사장', '개최지', '참여장소', '장소명', '참여장'] },
+    { key: 'power', label: '전력(kW)', syn: ['전력사용량', '사용전력', '소비전력', '전력량', '전력', '전기', 'kw', '킬로와트'] },
     { key: 'memo', label: '비고', syn: ['비고', '메모', '특이사항', '참고'] },
   ];
 
@@ -47,7 +48,26 @@
       const score = Object.keys(map).length + (map.name != null ? 3 : 0);
       if (score > best.score) best = { headerRow: r, map, score };
     }
+    X.guessPowerColumn(rows, best.headerRow, best.map);
     return best;
+  };
+
+  /**
+   * 전력 열 머리글을 못 찾았으면 「장소」 바로 뒤 열을 확인:
+   * 머리글이 비었거나 kW·전력 같은 말이 있고, 값이 숫자(3, 2.5kW, 3000W …)면 전력 열로 봄
+   */
+  X.guessPowerColumn = function (rows, headerRow, map) {
+    if (map.power != null || map.place == null) return;
+    const col = map.place + 1;
+    if (Object.values(map).includes(col)) return;
+    const head = String((rows[headerRow] || [])[col] || '').trim();
+    const vals = rows
+      .slice(headerRow + 1)
+      .map((r) => String((r || [])[col] == null ? '' : r[col]).trim())
+      .filter(Boolean);
+    if (!vals.length) return;
+    const numeric = vals.filter((v) => FM.Power.parse(v) !== '' && /^[\d.,\s]+(k?w|kw|킬로와트|㎾)?$/i.test(v)).length;
+    if ((head === '' || /kw|전력|전기|㎾/i.test(head)) && numeric >= Math.max(1, vals.length * 0.6)) map.power = col;
   };
 
   X.mapHeader = function (header) {
@@ -122,6 +142,7 @@
       const data = {};
       for (const f of X.FIELDS) data[f.key] = get(f.key);
       data.phone = X.formatPhone(data.phone);
+      data.power = FM.Power.parse(data.power);
       data.category = FM.normCategory(data.category);
       const dayVals = {};
       for (const [dayId, ci] of Object.entries(dayCols || {})) if (ci != null && ci >= 0) dayVals[dayId] = X.truthy(row[ci]);
@@ -207,7 +228,7 @@
           }
           const f = farmById[L.assign[k]];
           const pin = f && L.pins[f.id] ? ' 📌' : '';
-          const arrow = cell.dir ? ' ' + FM.DIR_ARROW[cell.dir] : '';
+          const arrow = (cell.dir ? ' ' + FM.DIR_ARROW[cell.dir] : '') + (cell.zone ? ' [' + cell.zone + ']' : '');
           if (cell.dir) {
             // 앞면(손님 쪽)을 굵은 선으로
             const side = { u: 'top', d: 'bottom', l: 'left', r: 'right' }[cell.dir];
@@ -219,7 +240,7 @@
                 { text: nums[k] + arrow + pin + '\n', font: { size: 8, color: { argb: 'FF666666' } } },
                 { text: FM.shortName(f.name), font: { bold: true, size: 10 } },
                 { text: '\n' + (f.category || ''), font: { size: 7, color: { argb: 'FF666666' } } },
-              ],
+              ].concat(FM.Power.kw(f) ? [{ text: '  ⚡' + FM.Power.fmt(FM.Power.kw(f)), font: { size: 8, bold: true, color: { argb: 'FFB45309' } } }] : []),
             };
             xc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(FM.catColor(f.category).bgHex) } };
           } else {
@@ -262,18 +283,20 @@
         { header: '품목군', key: 'category', width: 14 },
         { header: '신청품목', key: 'items', width: 60 },
         { header: '고정', key: 'pin', width: 6 },
+        { header: '전력(kW)', key: 'power', width: 9 },
+        { header: '전력 구역', key: 'zone', width: 9 },
         { header: '비고', key: 'memo', width: 20 },
       ];
       for (const k of FM.boothKeys(L)) {
         const f = farmById[L.assign[k]];
         ls.addRow(
           f
-            ? { no: nums[k], name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, pin: L.pins[f.id] ? 'O' : '', memo: f.memo }
-            : { no: nums[k], name: '(빈 자리)' }
+            ? { no: nums[k], name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, pin: L.pins[f.id] ? 'O' : '', power: FM.Power.kw(f) || '', zone: L.cells[k].zone || '', memo: f.memo }
+            : { no: nums[k], name: '(빈 자리)', zone: L.cells[k].zone || '' }
         );
       }
       const unplaced = FM.attendingFarms(ev, day).filter((f) => !Object.values(L.assign).includes(f.id));
-      for (const f of unplaced) ls.addRow({ no: '미배치', name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, memo: f.memo });
+      for (const f of unplaced) ls.addRow({ no: '미배치', name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, power: FM.Power.kw(f) || '', memo: f.memo });
       styleTable(ls);
     }
 
@@ -290,13 +313,14 @@
       { header: '신청품목', key: 'items', width: 50 },
       { header: '신규여부', key: 'isNew', width: 8 },
       { header: '장소', key: 'place', width: 8 },
+      { header: '전력(kW)', key: 'power', width: 9 },
     ];
     ev.days.forEach((d, i) => cols.push({ header: FM.weekday(d.date) + ' ' + FM.fmtDay(d.date).replace(/\(.\)$/, ''), key: 'd' + i, width: 12 }));
     cols.push({ header: '원재료', key: 'tags', width: 30 }, { header: '제품 형태', key: 'forms', width: 24 }, { header: '비고', key: 'memo', width: 20 });
     rs.columns = cols;
     const numsByDay = inspections.map((x) => ({ map: FM.farmCellMap(x.day.layout), nums: x.nums }));
     ev.farms.forEach((f, idx) => {
-      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, tags: (f.tags || []).join(', '), forms: (f.forms || []).join(', '), memo: f.memo };
+      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, power: FM.Power.kw(f) || '', tags: (f.tags || []).join(', '), forms: (f.forms || []).join(', '), memo: f.memo };
       ev.days.forEach((d, i) => {
         if (!f.days[d.id]) return (row['d' + i] = '');
         const k = numsByDay[i].map[f.id];
@@ -305,6 +329,44 @@
       rs.addRow(row);
     });
     styleTable(rs);
+
+    // --- 전력 분산 시트
+    const ps = wb.addWorksheet(sheetName(wb, '전력 분산'));
+    ps.columns = [
+      { header: '일자', key: 'day', width: 12 },
+      { header: '전력 구역', key: 'z', width: 10 },
+      { header: '부스 수', key: 'booths', width: 8 },
+      { header: '전력 입력 농가', key: 'farms', width: 12 },
+      { header: '합계(kW)', key: 'load', width: 10 },
+      { header: '목표(kW)', key: 'target', width: 10 },
+      { header: '용량(kW)', key: 'cap', width: 10 },
+      { header: '목표 대비', key: 'dev', width: 10 },
+      { header: '상태', key: 'state', width: 24 },
+    ];
+    for (const { day } of inspections) {
+      const pr = FM.Power.report(day.layout, farmById, state.settings);
+      const dn = FM.fmtDay(day.date);
+      if (!pr.count) {
+        const placedAny = Object.keys(day.layout.assign).length > 0;
+        ps.addRow({ day: dn, state: placedAny ? '배치된 농가 중 전력 사용량이 입력된 곳 없음' : '아직 배치 전' });
+        continue;
+      }
+      for (const z of pr.zones)
+        ps.addRow({
+          day: dn,
+          z: (pr.virtual ? '참고 ' : '') + z.z,
+          booths: z.booths,
+          farms: z.farms,
+          load: Math.round(z.load * 10) / 10,
+          target: Math.round(z.target * 10) / 10,
+          cap: z.cap || '',
+          dev: (z.dev >= 0 ? '+' : '') + Math.round(z.dev * 100) + '%',
+          state: z.over ? '⚠ 용량 초과' : z.level === 'warn' ? '치우침' : '고름',
+        });
+      ps.addRow({ day: dn, z: '전체', farms: pr.count, load: Math.round(pr.total * 10) / 10, cap: pr.gen || '', state: pr.genOver ? '⚠ 발전기 용량 초과' : FM.Power.LEVEL_LABEL[pr.level] });
+      for (const hp of pr.hotPairs) ps.addRow({ day: dn, z: '고전력 인접', state: `${hp.a.farm.name}(${FM.Power.fmt(hp.a.kw)}) ↔ ${hp.b.farm.name}(${FM.Power.fmt(hp.b.kw)}) ${hp.label}` });
+    }
+    styleTable(ps);
 
     // --- 검수 결과 시트
     const is = wb.addWorksheet(sheetName(wb, '검수결과'));
@@ -410,7 +472,10 @@
     g.fillText(`${venue.name} ${ev.title} — ${day.round ? day.round + ' ' : ''}${FM.fmtDay(day.date)} 배치도`, PAD, PAD - 6);
     g.font = font(400, 13);
     g.fillStyle = '#555';
-    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn} · 초록 막대 = 부스 앞면(손님 쪽)`, PAD, PAD + 26);
+    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn} · 초록 막대 = 부스 앞면(손님 쪽)${(() => {
+      const pr = FM.Power.report(L, farmById, settings);
+      return pr.count ? ` · ⚡ 전력 ${FM.Power.fmt(pr.total)} (${pr.virtual ? '구역 미지정' : pr.zones.map((z) => z.z + ' ' + FM.Power.fmt(z.load)).join(' / ')})` : '';
+    })()}`, PAD, PAD + 26);
     const ox = PAD + (W - PAD * 2 - gridW) / 2;
     const oy = HEAD + PAD - 10;
     const pos = (r, c) => ({ x: ox + (c - b.minC) * (CW + GAP), y: oy + (r - b.minR) * (CH + GAP) });
@@ -480,6 +545,18 @@
         g.fillStyle = '#666';
         g.font = font(700, 11);
         halo(String(nums[k]) + (f && L.pins[f.id] ? ' 📌' : ''), x + 6, y + 5);
+        if (cell.zone) {
+          g.fillStyle = FM.Power.ZONE_COLORS[cell.zone] || '#555';
+          g.font = font(800, 10);
+          halo(cell.zone, x + 6, y + CH - 16);
+        }
+        if (f && FM.Power.kw(f)) {
+          g.fillStyle = '#b45309';
+          g.font = font(800, 10.5);
+          g.textAlign = 'right';
+          halo('⚡' + FM.Power.fmt(FM.Power.kw(f)), x + CW - 6, y + 5);
+          g.textAlign = 'left';
+        }
         g.textAlign = 'center';
         if (f) {
           g.fillStyle = '#1a1a1a';

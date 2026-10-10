@@ -477,9 +477,45 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .link-btn { border: 0; background: none; padding: 0; color: #1e5bd8; cursor: pointer; text-align: left; text-decoration: underline; }
 .legend-line.dotted { border-top-style: dotted; }
 
+/* ---------- 전력 ---------- */
+.cell .czone { position: absolute; left: 3px; bottom: 3px; color: #fff; font-size: calc(9px * var(--z, 1)); font-weight: 800; line-height: 1; padding: 2px 3px; border-radius: 3px; pointer-events: none; }
+.cell .cpow { position: absolute; right: 3px; bottom: 3px; font-size: calc(9.5px * var(--z, 1)); font-weight: 800; color: #b45309; background: rgba(255, 247, 230, .9); border-radius: 3px; padding: 0 2px; line-height: 1.3; pointer-events: none; }
+.lv-grid.tiny .cell .cpow { font-size: 8px; }
+.zone-btn { border: 2px solid var(--line-strong); background: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-weight: 800; }
+.zone-caps { display: flex; flex-direction: column; gap: 4px; }
+.zone-cap { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
+.zone-cap .input.num { width: 76px; padding: 4px 6px; }
+.zone-tag { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 4px; border-radius: 5px; color: #fff; font-weight: 800; font-size: .78rem; }
+.power-chip { display: inline-flex; align-items: center; gap: 2px; border: 1.5px solid #f3c46b; background: #fff8e8; color: #8a5a00; border-radius: 30px; padding: 5px 12px; cursor: pointer; font-weight: 700; font-size: .88rem; }
+.power-chip small { font-weight: 600; }
+.power-chip.lv-warn { border-color: var(--warn); }
+.power-chip.lv-danger { border-color: var(--danger); background: #fdecec; color: #a32b2b; }
+.power-chip.lv-good { border-color: #9fd2b1; background: #eef8f1; color: #1f6b3e; }
+.power-sec .power-level { font-size: .8rem; font-weight: 700; padding: 1px 8px; border-radius: 20px; background: #eef1ec; }
+.power-sec.lv-good .power-level { background: #dff1e5; color: #1f6b3e; }
+.power-sec.lv-fair .power-level { background: #fff3d6; color: #8a5a00; }
+.power-sec.lv-warn .power-level { background: #fde7c4; color: #94570b; }
+.power-sec.lv-danger .power-level { background: #fdecec; color: #a32b2b; }
+.zone-bars { display: flex; flex-direction: column; gap: 6px; }
+.zone-bar-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; font-size: .85rem; }
+.zone-bar { position: relative; height: 14px; background: #f0f2ee; border-radius: 7px; overflow: visible; }
+.zb-fill { height: 100%; border-radius: 7px; background: #59a14f; }
+.zb-fill.lv-warn { background: var(--warn); }
+.zb-fill.lv-danger { background: var(--danger); }
+.zb-target { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #333; }
+.zb-cap { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--danger); }
+.zb-val { white-space: nowrap; font-weight: 700; }
+.zb-val small { color: var(--muted); font-weight: 500; }
+.chip.power { background: #fff8e8; border-color: #f3c46b; }
+.th-power { text-align: center !important; }
+.td-power { width: 80px; }
+.pow-input { width: 72px; padding: 4px 6px; text-align: right; }
+.pow-input.has { background: #fff8e8; border-color: #f3c46b; font-weight: 700; color: #8a5a00; }
+.fi-pow { font-size: .75rem; font-weight: 800; color: #b45309; white-space: nowrap; }
+
 </style>
-<meta name="generator" content="농부의시장 배치도 도우미 2026.10.10 03:54">
-<script>window.FM_BUILD = "2026.10.10 03:54";</script>
+<meta name="generator" content="농부의시장 배치도 도우미 2026.10.10 04:47">
+<script>window.FM_BUILD = "2026.10.10 04:47";</script>
 </head>
 <body>
 <header id="topbar" class="topbar"></header>
@@ -797,6 +833,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     autoPin: true, // 수동 배치·교체 시 자동 고정
     zoom: 1, // ③ 배치·④ 검수 화면 배율
     zoomEdit: 0.6, // ② 칸 만들기 화면 배율 (작게 보여서 넓은 격자를 한눈에)
+    wPow: 0.5, // 고전력 농가끼리 떨어뜨리기
+    wZone: 4, // 전력 구역(간선) 합계 균형
     rawDict: FM.DEFAULT_RAW_DICT,
     formDict: FM.DEFAULT_FORM_DICT,
     dictVersion: FM.DICT_VERSION,
@@ -947,7 +985,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   //            tags[], tagsManual, days: {dayId: true} }
   // 격자 크기: 농가가 40곳을 넘는 경우가 많아 넉넉하게 시작 (20줄 × 30칸 = 600칸)
   FM.GRID = { rows: 20, cols: 30, max: 100, margin: 3 };
-  FM.emptyLayout = (rows, cols) => ({ rows: rows || FM.GRID.rows, cols: cols || FM.GRID.cols, cells: {}, assign: {}, pins: {}, numbering: 'row' });
+  FM.emptyLayout = (rows, cols) => ({ rows: rows || FM.GRID.rows, cols: cols || FM.GRID.cols, cells: {}, assign: {}, pins: {}, numbering: 'row', zoneCaps: {}, genCap: '' });
 
   FM.newDay = (date, round) => ({ id: FM.uid('d'), date, round: round || '', layout: FM.emptyLayout() });
 
@@ -966,6 +1004,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         isNew: '',
         place: '',
         memo: '',
+        power: '', // 전력 사용량 kW ('' = 모름/적음)
         tags: [], // 원재료
         forms: [], // 제품 형태
         tagsManual: false,
@@ -1025,6 +1064,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         d.layout.cells = d.layout.cells || {};
         d.layout.assign = d.layout.assign || {};
         d.layout.pins = d.layout.pins || {};
+        d.layout.zoneCaps = d.layout.zoneCaps || {}; // 전력 구역별 용량 kW
+        if (d.layout.genCap === undefined) d.layout.genCap = ''; // 발전기(전체) 용량 kW
         // 아직 칸을 그리지 않은 예전의 작은 격자(8×14)는 넉넉한 기본 크기로 늘림
         if (!Object.keys(d.layout.cells).length) {
           d.layout.rows = Math.max(d.layout.rows, FM.GRID.rows);
@@ -1032,6 +1073,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         }
       }
       ev.farms = ev.farms.map((f) => FM.newFarm(f));
+      for (const f of ev.farms) if (f.power !== '' && typeof f.power !== 'number') f.power = FM.Power ? FM.Power.parse(f.power) : '';
       if (resetTags) for (const f of ev.farms) f.tagsManual = false;
       ev.days.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     }
@@ -1857,6 +1899,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
    *   toPlace: number[]         새로 배치할 농가 인덱스 (우선순위 순)
    *   fresh:   boolean          true = 고정되지 않은 칸을 비우고 처음부터 재배치
    *   anchorPenalty: number     자리 이동 1건당 벌점 (0 = 자유 재배치)
+   *   power:   Float64Array(N1) 농가별 전력 kW (마지막 = 빈 자리 0)        ─┐ 전력 구역 균형 (선택)
+   *   zone:    {zoneOf: Int32Array(K), caps: Float64Array(Z)}              │ 구역 합계를 목표에 맞추고
+   *   wZone:   구역 불균형 가중치 (기본 4)                                 ─┘ 용량 초과는 크게 벌점
    *   st                        설정 (radius, vScale — 근접도 계산용)
    *   seed, restarts, iterations
    * @returns {{assign: Int32Array, cost: number, unplaced: number[], moved: number}}
@@ -1893,12 +1938,74 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const unplaced = pool.length > empties ? pool.slice(empties) : [];
     pool = pool.slice(0, empties);
 
-    // 농가별 '배치 난이도' = 다른 모든 농가와의 유사도 합
+    // ---- 전력 구역 균형 준비
+    const PW = p.power || null;
+    const Z = PW && p.zone && p.zone.caps.length ? p.zone : null;
+    let ZL = null;
+    let ZT = null;
+    const wZ = p.wZone == null ? 4 : p.wZone;
+    if (Z) {
+      const nZ = Z.caps.length;
+      ZL = new Float64Array(nZ);
+      ZT = new Float64Array(nZ);
+      let total = 0;
+      for (let i = 0; i < K; i++) if (base[i] !== E) total += PW[base[i]];
+      for (const f of pool) total += PW[f];
+      const booths = new Float64Array(nZ);
+      for (let i = 0; i < K; i++) if (Z.zoneOf[i] >= 0) booths[Z.zoneOf[i]]++;
+      const allZoned = booths.reduce((a, b) => a + b, 0) === K;
+      const capSum = Z.caps.reduce((a, b) => a + b, 0);
+      const allCaps = allZoned && Z.caps.every((c) => c > 0);
+      for (let z = 0; z < nZ; z++) ZT[z] = allCaps ? (total * Z.caps[z]) / capSum : (total * booths[z]) / K;
+      if (total <= 0) ZL = null;
+    }
+    /** 구역 z 의 합계가 L 일 때 비용 */
+    function ZC(z, L) {
+      let c = 0;
+      const T = ZT[z];
+      if (T > 0) c += wZ * ((L - T) / T) * ((L - T) / T);
+      const cap = Z.caps[z];
+      if (cap > 0 && L > cap) {
+        const o = (L - cap) / cap;
+        c += 30 * o + 30 * o * o;
+      }
+      return c;
+    }
+    function setLoads(A) {
+      if (!ZL) return;
+      ZL.fill(0);
+      for (let i = 0; i < K; i++) if (Z.zoneOf[i] >= 0) ZL[Z.zoneOf[i]] += PW[A[i]];
+    }
+    function zoneDelta(A, i, j) {
+      const zi = Z.zoneOf[i];
+      const zj = Z.zoneOf[j];
+      if (zi === zj) return 0;
+      const pi = PW[A[i]];
+      const pj = PW[A[j]];
+      if (pi === pj) return 0;
+      let d = 0;
+      if (zi >= 0) d += ZC(zi, ZL[zi] - pi + pj) - ZC(zi, ZL[zi]);
+      if (zj >= 0) d += ZC(zj, ZL[zj] - pj + pi) - ZC(zj, ZL[zj]);
+      return d;
+    }
+    function swapLoads(A, i, j) {
+      if (!ZL) return;
+      const zi = Z.zoneOf[i];
+      const zj = Z.zoneOf[j];
+      if (zi === zj) return;
+      const pi = PW[A[i]];
+      const pj = PW[A[j]];
+      if (zi >= 0) ZL[zi] += pj - pi;
+      if (zj >= 0) ZL[zj] += pi - pj;
+    }
+
+    // 농가별 '배치 난이도' = 다른 모든 농가와의 유사도 합 (+ 전력이 클수록 먼저)
     const weight = new Float64Array(N1);
+    const maxPW = PW ? Math.max(0, ...Array.from(PW)) : 0;
     for (let a = 0; a < E; a++) {
       let s = 0;
       for (let b = 0; b < E; b++) s += S[a * N1 + b];
-      weight[a] = s;
+      weight[a] = s + (maxPW > 0 ? (3 * PW[a]) / maxPW : 0);
     }
 
     const { off, idx, w } = nb;
@@ -1929,6 +2036,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const after = (fj !== E && fj !== oi ? 1 : 0) + (fi !== E && fi !== oj ? 1 : 0);
         d += lam * (after - before);
       }
+      if (ZL) d += zoneDelta(A, i, j);
       return d;
     }
 
@@ -1942,25 +2050,33 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     function greedy(A, jitter) {
       const key = new Map(pool.map((f) => [f, weight[f] * (1 + jitter * (rng() - 0.5))]));
       const order = pool.slice().sort((a, b) => key.get(b) - key.get(a));
+      setLoads(A);
       for (const f of order) {
         let best = Infinity;
         let cands = [];
         for (const i of movable) {
           if (A[i] !== E) continue;
-          const c = localCost(A, i, f);
+          let c = localCost(A, i, f);
+          if (ZL && Z.zoneOf[i] >= 0 && PW[f]) {
+            const z = Z.zoneOf[i];
+            c += ZC(z, ZL[z] + PW[f]) - ZC(z, ZL[z]);
+          }
           if (c < best - 1e-9) {
             best = c;
             cands = [i];
           } else if (c < best + 1e-9) cands.push(i);
         }
         if (!cands.length) break;
-        A[cands[Math.floor(rng() * cands.length)]] = f;
+        const at = cands[Math.floor(rng() * cands.length)];
+        A[at] = f;
+        if (ZL && Z.zoneOf[at] >= 0) ZL[Z.zoneOf[at]] += PW[f];
       }
     }
 
     function anneal(A, iters) {
       const M = movable.length;
       if (M < 2) return;
+      setLoads(A);
       // 초기 온도: 비용이 늘어나는 교환의 평균 증가량
       let sum = 0;
       let cnt = 0;
@@ -1991,6 +2107,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if (fi === fj) continue;
         const d = delta(A, i, j);
         if (d <= 0 || rng() < Math.exp(-d / T)) {
+          swapLoads(A, i, j);
           A[i] = fj;
           A[j] = fi;
           cur += d;
@@ -2001,9 +2118,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         }
       }
       A.set(bestA);
+      setLoads(A);
     }
 
     function polish(A) {
+      setLoads(A);
       for (let pass = 0; pass < 30; pass++) {
         let improved = false;
         for (let x = 0; x < movable.length; x++) {
@@ -2012,6 +2131,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             const j = movable[y];
             if (A[i] === A[j]) continue;
             if (delta(A, i, j) < -1e-9) {
+              swapLoads(A, i, j);
               const t = A[i];
               A[i] = A[j];
               A[j] = t;
@@ -2026,6 +2146,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     function fullCost(A) {
       let c = Opt.totalCost(A, nb, S, N1, true);
       if (anchor) for (let i = 0; i < K; i++) if (A[i] !== E && A[i] !== anchor[i]) c += lam;
+      if (ZL) {
+        setLoads(A);
+        for (let z = 0; z < ZL.length; z++) c += ZC(z, ZL[z]);
+      }
       return c;
     }
 
@@ -2052,6 +2176,182 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Opt;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>/* js/power.js */
+/*
+ * 전력 분산 — 농가별 전력 사용량(kW)을 간선·분전반 구역에 고르게 나누기
+ *
+ *  ① 전력 구역(A·B·C…): 한 간선(분전반)이 맡는 부스 묶음. 칸마다 cell.zone 으로 지정
+ *     구역별 목표 = 전체 kW × (구역 용량 비율, 용량을 모두 적었을 때) 또는 (구역 부스 수 비율)
+ *     구역 비용 = wZone × ((합계 − 목표) / 목표)²  + 용량 초과 시 큰 벌점
+ *  ② 고전력끼리 떨어뜨리기: 두 농가의 상대 전력 u = kW / 최대kW 일 때
+ *     유사도 행렬에 wPow × u_a × u_b 를 더해, 근처(같은 분기 회로)에 몰리지 않게 함
+ */
+(function (root) {
+  'use strict';
+  const FM = (root.FM = root.FM || {});
+  const P = (FM.Power = {});
+
+  P.ZONES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  P.ZONE_COLORS = { A: '#e15759', B: '#4e79a7', C: '#59a14f', D: '#f28e2b', E: '#b07aa1', F: '#17a2b8', G: '#c9a227', H: '#8c6d4f' };
+
+  /** "3", "2.5kW", "3,000W", "1.5 킬로와트" → kW 숫자 ('' = 모름) */
+  P.parse = function (v) {
+    if (v == null) return '';
+    if (typeof v === 'number') return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : '';
+    const s = String(v).replace(/,/g, '').replace(/\s+/g, '').toLowerCase();
+    const m = s.match(/(\d+(?:\.\d+)?)(kw|킬로와트|㎾|w|와트)?/);
+    if (!m) return '';
+    let n = parseFloat(m[1]);
+    if (!isFinite(n) || n <= 0) return '';
+    if ((m[2] === 'w' || m[2] === '와트') && n >= 50) n = n / 1000;
+    return Math.round(n * 100) / 100;
+  };
+  P.kw = (f) => (f && typeof f.power === 'number' && f.power > 0 ? f.power : 0);
+  P.fmt = (kw) => (Math.round(kw * 10) / 10).toString().replace(/\.0$/, '') + 'kW';
+
+  /** 지금 쓰는 구역 글자 목록 (A부터 순서대로) */
+  P.zonesIn = function (L) {
+    const set = new Set();
+    for (const c of Object.values(L.cells)) if (c.t === 'b' && c.zone) set.add(c.zone);
+    return P.ZONES.filter((z) => set.has(z));
+  };
+
+  /**
+   * 부스를 n개 구역으로 자동으로 나눔 — 배치도의 긴 방향을 따라 부스 수가 같은 띠로 자름
+   * (간선이 통로를 따라 깔리고 분전반이 일정 간격으로 있다고 가정)
+   */
+  P.splitKeys = function (L, n) {
+    const keys = Object.keys(L.cells).filter((k) => L.cells[k].t === 'b');
+    if (!keys.length) return [];
+    let minR = Infinity;
+    let maxR = -1;
+    let minC = Infinity;
+    let maxC = -1;
+    const pos = keys.map((k) => {
+      const [r, c] = FM.parseKey(k);
+      minR = Math.min(minR, r);
+      maxR = Math.max(maxR, r);
+      minC = Math.min(minC, c);
+      maxC = Math.max(maxC, c);
+      return { k, r, c };
+    });
+    const wide = maxC - minC >= maxR - minR;
+    pos.sort((a, b) => (wide ? a.c - b.c || a.r - b.r : a.r - b.r || a.c - b.c));
+    n = Math.max(1, Math.min(P.ZONES.length, Math.floor(n), keys.length));
+    const groups = Array.from({ length: n }, () => []);
+    pos.forEach((p, i) => groups[Math.min(n - 1, Math.floor((i * n) / pos.length))].push(p.k));
+    return { groups, wide };
+  };
+  P.autoZones = function (L, n) {
+    const res = P.splitKeys(L, n);
+    if (!res.groups) return 0;
+    for (const c of Object.values(L.cells)) delete c.zone;
+    res.groups.forEach((g, i) => g.forEach((k) => (L.cells[k].zone = P.ZONES[i])));
+    L.zoneCaps = L.zoneCaps || {};
+    for (const z of Object.keys(L.zoneCaps)) if (P.ZONES.indexOf(z) >= res.groups.length) delete L.zoneCaps[z];
+    return res.groups.length;
+  };
+
+  // ------------------------------------------------------------ 자동 배치용 ---
+  /** 고전력끼리 떨어뜨리기: 유사도 행렬 S 에 wPow × u_a × u_b 를 더함 */
+  P.addToMatrix = function (S, N1, farms, st) {
+    const w = st.wPow == null ? 0.5 : st.wPow;
+    const kws = farms.map(P.kw);
+    const max = Math.max(0, ...kws);
+    if (!w || max <= 0) return;
+    const u = kws.map((x) => x / max);
+    for (let i = 0; i < farms.length; i++) {
+      if (!u[i]) continue;
+      for (let j = 0; j < farms.length; j++) if (i !== j && u[j]) S[i * N1 + j] += w * u[i] * u[j];
+    }
+  };
+
+  /** 최적화에 넘길 구역 정보: 칸별 구역 번호, 구역 용량 */
+  P.zoneSetup = function (L, keys) {
+    const zones = P.zonesIn(L);
+    if (!zones.length) return null;
+    const zoneOf = new Int32Array(keys.length).fill(-1);
+    keys.forEach((k, i) => {
+      const z = L.cells[k] && L.cells[k].zone;
+      if (z) zoneOf[i] = zones.indexOf(z);
+    });
+    const caps = Float64Array.from(zones.map((z) => +((L.zoneCaps || {})[z] || 0)));
+    return { zones, zoneOf, caps };
+  };
+
+  // ------------------------------------------------------------------ 검수 ---
+  /**
+   * 전력 분산 검수
+   * @returns {{total, count, zones:[{z, booths, load, target, cap, dev, level}], level, maxDev, hotPairs, gen, virtual}}
+   */
+  P.report = function (L, farmById, st) {
+    const placed = [];
+    for (const [k, fid] of Object.entries(L.assign)) {
+      const f = farmById[fid];
+      const cell = L.cells[k];
+      if (!f || !cell || cell.t !== 'b') continue;
+      const [r, c] = FM.parseKey(k);
+      placed.push({ key: k, r, c, cell, farm: f, kw: P.kw(f) });
+    }
+    const withPower = placed.filter((p) => p.kw > 0);
+    const total = withPower.reduce((s, p) => s + p.kw, 0);
+    const out = { total, count: withPower.length, zones: [], level: null, maxDev: 0, hotPairs: [], virtual: false };
+    out.gen = +(L.genCap || 0);
+    out.genOver = out.gen > 0 && total > out.gen;
+    if (!withPower.length) return out;
+
+    // 구역별 합계 (구역이 없으면 긴 방향 3등분으로 참고용 계산)
+    let zoneOfKey = {};
+    let zones = P.zonesIn(L);
+    if (zones.length) {
+      for (const k of Object.keys(L.cells)) if (L.cells[k].zone) zoneOfKey[k] = L.cells[k].zone;
+    } else {
+      const res = P.splitKeys(L, 3);
+      if (res.groups) {
+        out.virtual = true;
+        out.virtualWide = res.wide;
+        zones = res.groups.map((_, i) => P.ZONES[i]);
+        res.groups.forEach((g, i) => g.forEach((k) => (zoneOfKey[k] = P.ZONES[i])));
+      }
+    }
+    const caps = out.virtual ? {} : L.zoneCaps || {};
+    const allCaps = zones.length && zones.every((z) => +caps[z] > 0);
+    const capSum = zones.reduce((s, z) => s + (+caps[z] || 0), 0);
+    const boothsIn = {};
+    for (const k of Object.keys(zoneOfKey)) if (L.cells[k] && L.cells[k].t === 'b') boothsIn[zoneOfKey[k]] = (boothsIn[zoneOfKey[k]] || 0) + 1;
+    const boothSum = Object.values(boothsIn).reduce((s, x) => s + x, 0) || 1;
+    for (const z of zones) {
+      const load = withPower.filter((p) => zoneOfKey[p.key] === z).reduce((s, p) => s + p.kw, 0);
+      const target = allCaps ? (total * +caps[z]) / capSum : (total * (boothsIn[z] || 0)) / boothSum;
+      const cap = +caps[z] || 0;
+      const dev = target > 0 ? (load - target) / target : 0;
+      const over = cap > 0 && load > cap;
+      const level = over ? 'danger' : Math.abs(dev) > 0.3 ? 'warn' : 'ok';
+      out.zones.push({ z, booths: boothsIn[z] || 0, load, target, cap, dev, over, level, farms: withPower.filter((p) => zoneOfKey[p.key] === z).length });
+    }
+    out.maxDev = Math.max(0, ...out.zones.map((x) => Math.abs(x.dev)));
+    out.level = out.zones.some((x) => x.over) || out.genOver ? 'danger' : out.maxDev > 0.3 ? 'warn' : out.maxDev > 0.15 ? 'fair' : 'good';
+
+    // 고전력 농가끼리 바로 옆·대각선 (같은 분기 회로에 몰릴 위험)
+    const max = Math.max(...withPower.map((p) => p.kw));
+    const hot = withPower.filter((p) => p.kw >= max * 0.5);
+    for (let i = 0; i < hot.length; i++)
+      for (let j = i + 1; j < hot.length; j++) {
+        const a = hot[i];
+        const b = hot[j];
+        const d = Math.hypot(a.r - b.r, a.c - b.c);
+        if (d <= 1.5) out.hotPairs.push({ a, b, d, sum: a.kw + b.kw, label: d === 1 ? '바로 옆' : '대각선' });
+      }
+    out.hotPairs.sort((x, y) => y.sum - x.sum);
+    return out;
+  };
+
+  P.LEVEL_LABEL = { good: '고름', fair: '조금 치우침', warn: '치우침', danger: '용량 초과' };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = P;
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -2277,6 +2577,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     { key: 'items', label: '신청품목', syn: ['신청품목', '판매품목', '주요품목', '취급품목', '품목', '판매상품', '상품'] },
     { key: 'isNew', label: '신규여부', syn: ['신규여부', '신규', '신규/기존', '신규기존'] },
     { key: 'place', label: '장소', syn: ['장소', '행사장', '개최지', '참여장소', '장소명', '참여장'] },
+    { key: 'power', label: '전력(kW)', syn: ['전력사용량', '사용전력', '소비전력', '전력량', '전력', '전기', 'kw', '킬로와트'] },
     { key: 'memo', label: '비고', syn: ['비고', '메모', '특이사항', '참고'] },
   ];
 
@@ -2306,7 +2607,26 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const score = Object.keys(map).length + (map.name != null ? 3 : 0);
       if (score > best.score) best = { headerRow: r, map, score };
     }
+    X.guessPowerColumn(rows, best.headerRow, best.map);
     return best;
+  };
+
+  /**
+   * 전력 열 머리글을 못 찾았으면 「장소」 바로 뒤 열을 확인:
+   * 머리글이 비었거나 kW·전력 같은 말이 있고, 값이 숫자(3, 2.5kW, 3000W …)면 전력 열로 봄
+   */
+  X.guessPowerColumn = function (rows, headerRow, map) {
+    if (map.power != null || map.place == null) return;
+    const col = map.place + 1;
+    if (Object.values(map).includes(col)) return;
+    const head = String((rows[headerRow] || [])[col] || '').trim();
+    const vals = rows
+      .slice(headerRow + 1)
+      .map((r) => String((r || [])[col] == null ? '' : r[col]).trim())
+      .filter(Boolean);
+    if (!vals.length) return;
+    const numeric = vals.filter((v) => FM.Power.parse(v) !== '' && /^[\d.,\s]+(k?w|kw|킬로와트|㎾)?$/i.test(v)).length;
+    if ((head === '' || /kw|전력|전기|㎾/i.test(head)) && numeric >= Math.max(1, vals.length * 0.6)) map.power = col;
   };
 
   X.mapHeader = function (header) {
@@ -2381,6 +2701,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const data = {};
       for (const f of X.FIELDS) data[f.key] = get(f.key);
       data.phone = X.formatPhone(data.phone);
+      data.power = FM.Power.parse(data.power);
       data.category = FM.normCategory(data.category);
       const dayVals = {};
       for (const [dayId, ci] of Object.entries(dayCols || {})) if (ci != null && ci >= 0) dayVals[dayId] = X.truthy(row[ci]);
@@ -2466,7 +2787,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           }
           const f = farmById[L.assign[k]];
           const pin = f && L.pins[f.id] ? ' 📌' : '';
-          const arrow = cell.dir ? ' ' + FM.DIR_ARROW[cell.dir] : '';
+          const arrow = (cell.dir ? ' ' + FM.DIR_ARROW[cell.dir] : '') + (cell.zone ? ' [' + cell.zone + ']' : '');
           if (cell.dir) {
             // 앞면(손님 쪽)을 굵은 선으로
             const side = { u: 'top', d: 'bottom', l: 'left', r: 'right' }[cell.dir];
@@ -2478,7 +2799,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 { text: nums[k] + arrow + pin + '\n', font: { size: 8, color: { argb: 'FF666666' } } },
                 { text: FM.shortName(f.name), font: { bold: true, size: 10 } },
                 { text: '\n' + (f.category || ''), font: { size: 7, color: { argb: 'FF666666' } } },
-              ],
+              ].concat(FM.Power.kw(f) ? [{ text: '  ⚡' + FM.Power.fmt(FM.Power.kw(f)), font: { size: 8, bold: true, color: { argb: 'FFB45309' } } }] : []),
             };
             xc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(FM.catColor(f.category).bgHex) } };
           } else {
@@ -2521,18 +2842,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         { header: '품목군', key: 'category', width: 14 },
         { header: '신청품목', key: 'items', width: 60 },
         { header: '고정', key: 'pin', width: 6 },
+        { header: '전력(kW)', key: 'power', width: 9 },
+        { header: '전력 구역', key: 'zone', width: 9 },
         { header: '비고', key: 'memo', width: 20 },
       ];
       for (const k of FM.boothKeys(L)) {
         const f = farmById[L.assign[k]];
         ls.addRow(
           f
-            ? { no: nums[k], name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, pin: L.pins[f.id] ? 'O' : '', memo: f.memo }
-            : { no: nums[k], name: '(빈 자리)' }
+            ? { no: nums[k], name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, pin: L.pins[f.id] ? 'O' : '', power: FM.Power.kw(f) || '', zone: L.cells[k].zone || '', memo: f.memo }
+            : { no: nums[k], name: '(빈 자리)', zone: L.cells[k].zone || '' }
         );
       }
       const unplaced = FM.attendingFarms(ev, day).filter((f) => !Object.values(L.assign).includes(f.id));
-      for (const f of unplaced) ls.addRow({ no: '미배치', name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, memo: f.memo });
+      for (const f of unplaced) ls.addRow({ no: '미배치', name: f.name, owner: f.owner, phone: f.phone, sido: f.sido, sigungu: f.sigungu, category: f.category, items: f.items, power: FM.Power.kw(f) || '', memo: f.memo });
       styleTable(ls);
     }
 
@@ -2549,13 +2872,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       { header: '신청품목', key: 'items', width: 50 },
       { header: '신규여부', key: 'isNew', width: 8 },
       { header: '장소', key: 'place', width: 8 },
+      { header: '전력(kW)', key: 'power', width: 9 },
     ];
     ev.days.forEach((d, i) => cols.push({ header: FM.weekday(d.date) + ' ' + FM.fmtDay(d.date).replace(/\(.\)$/, ''), key: 'd' + i, width: 12 }));
     cols.push({ header: '원재료', key: 'tags', width: 30 }, { header: '제품 형태', key: 'forms', width: 24 }, { header: '비고', key: 'memo', width: 20 });
     rs.columns = cols;
     const numsByDay = inspections.map((x) => ({ map: FM.farmCellMap(x.day.layout), nums: x.nums }));
     ev.farms.forEach((f, idx) => {
-      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, tags: (f.tags || []).join(', '), forms: (f.forms || []).join(', '), memo: f.memo };
+      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, power: FM.Power.kw(f) || '', tags: (f.tags || []).join(', '), forms: (f.forms || []).join(', '), memo: f.memo };
       ev.days.forEach((d, i) => {
         if (!f.days[d.id]) return (row['d' + i] = '');
         const k = numsByDay[i].map[f.id];
@@ -2564,6 +2888,44 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       rs.addRow(row);
     });
     styleTable(rs);
+
+    // --- 전력 분산 시트
+    const ps = wb.addWorksheet(sheetName(wb, '전력 분산'));
+    ps.columns = [
+      { header: '일자', key: 'day', width: 12 },
+      { header: '전력 구역', key: 'z', width: 10 },
+      { header: '부스 수', key: 'booths', width: 8 },
+      { header: '전력 입력 농가', key: 'farms', width: 12 },
+      { header: '합계(kW)', key: 'load', width: 10 },
+      { header: '목표(kW)', key: 'target', width: 10 },
+      { header: '용량(kW)', key: 'cap', width: 10 },
+      { header: '목표 대비', key: 'dev', width: 10 },
+      { header: '상태', key: 'state', width: 24 },
+    ];
+    for (const { day } of inspections) {
+      const pr = FM.Power.report(day.layout, farmById, state.settings);
+      const dn = FM.fmtDay(day.date);
+      if (!pr.count) {
+        const placedAny = Object.keys(day.layout.assign).length > 0;
+        ps.addRow({ day: dn, state: placedAny ? '배치된 농가 중 전력 사용량이 입력된 곳 없음' : '아직 배치 전' });
+        continue;
+      }
+      for (const z of pr.zones)
+        ps.addRow({
+          day: dn,
+          z: (pr.virtual ? '참고 ' : '') + z.z,
+          booths: z.booths,
+          farms: z.farms,
+          load: Math.round(z.load * 10) / 10,
+          target: Math.round(z.target * 10) / 10,
+          cap: z.cap || '',
+          dev: (z.dev >= 0 ? '+' : '') + Math.round(z.dev * 100) + '%',
+          state: z.over ? '⚠ 용량 초과' : z.level === 'warn' ? '치우침' : '고름',
+        });
+      ps.addRow({ day: dn, z: '전체', farms: pr.count, load: Math.round(pr.total * 10) / 10, cap: pr.gen || '', state: pr.genOver ? '⚠ 발전기 용량 초과' : FM.Power.LEVEL_LABEL[pr.level] });
+      for (const hp of pr.hotPairs) ps.addRow({ day: dn, z: '고전력 인접', state: `${hp.a.farm.name}(${FM.Power.fmt(hp.a.kw)}) ↔ ${hp.b.farm.name}(${FM.Power.fmt(hp.b.kw)}) ${hp.label}` });
+    }
+    styleTable(ps);
 
     // --- 검수 결과 시트
     const is = wb.addWorksheet(sheetName(wb, '검수결과'));
@@ -2669,7 +3031,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     g.fillText(`${venue.name} ${ev.title} — ${day.round ? day.round + ' ' : ''}${FM.fmtDay(day.date)} 배치도`, PAD, PAD - 6);
     g.font = font(400, 13);
     g.fillStyle = '#555';
-    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn} · 초록 막대 = 부스 앞면(손님 쪽)`, PAD, PAD + 26);
+    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn} · 초록 막대 = 부스 앞면(손님 쪽)${(() => {
+      const pr = FM.Power.report(L, farmById, settings);
+      return pr.count ? ` · ⚡ 전력 ${FM.Power.fmt(pr.total)} (${pr.virtual ? '구역 미지정' : pr.zones.map((z) => z.z + ' ' + FM.Power.fmt(z.load)).join(' / ')})` : '';
+    })()}`, PAD, PAD + 26);
     const ox = PAD + (W - PAD * 2 - gridW) / 2;
     const oy = HEAD + PAD - 10;
     const pos = (r, c) => ({ x: ox + (c - b.minC) * (CW + GAP), y: oy + (r - b.minR) * (CH + GAP) });
@@ -2739,6 +3104,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         g.fillStyle = '#666';
         g.font = font(700, 11);
         halo(String(nums[k]) + (f && L.pins[f.id] ? ' 📌' : ''), x + 6, y + 5);
+        if (cell.zone) {
+          g.fillStyle = FM.Power.ZONE_COLORS[cell.zone] || '#555';
+          g.font = font(800, 10);
+          halo(cell.zone, x + 6, y + CH - 16);
+        }
+        if (f && FM.Power.kw(f)) {
+          g.fillStyle = '#b45309';
+          g.font = font(800, 10.5);
+          g.textAlign = 'right';
+          halo('⚡' + FM.Power.fmt(FM.Power.kw(f)), x + CW - 6, y + 5);
+          g.textAlign = 'left';
+        }
         g.textAlign = 'center';
         if (f) {
           g.fillStyle = '#1a1a1a';
@@ -2825,20 +3202,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 (function (root) {
   'use strict';
   const FM = (root.FM = root.FM || {});
-  // [농가명, 대표자, 시도, 시군구, 품목군, 신청품목, 참여(both|sat|sun)]
+  // [농가명, 대표자, 시도, 시군구, 품목군, 신청품목, 참여(both|sat|sun), 전력 kW(선택)]
   FM.SAMPLE_FARMS = [
     ['햇살양봉원', '홍길동', '강원', '홍천군', '가공식품류', '아카시아꿀, 야생화꿀, 로얄젤리', 'both'],
     ['산들식초방', '김예시', '전북', '무주군', '가공식품류', '감식초, 현미식초, 블루베리식초', 'both'],
-    ['할매떡방앗간', '이연습', '경기', '이천시', '가공식품류', '인절미, 가래떡, 꿀떡', 'both'],
+    ['할매떡방앗간', '이연습', '경기', '이천시', '가공식품류', '인절미, 가래떡, 꿀떡', 'both', 3],
     ['다정한과', '박샘플', '경북', '안동시', '가공식품류', '약과, 유과, 강정', 'both'],
     ['초록잼공방', '최가상', '충남', '논산시', '가공식품류', '딸기잼, 무화과잼, 사과잼', 'both'],
     ['바다김공방', '정테스트', '전남', '완도군', '가공식품류', '김부각, 곱창김', 'both'],
     ['고소한기름집', '강예제', '충북', '괴산군', '가공식품류', '참기름, 들기름, 볶은참깨', 'both'],
     ['오미자마을', '조보기', '경북', '문경시', '가공식품류', '오미자청, 오미자 음료', 'both'],
-    ['우리밀베이커리', '윤견본', '경기', '양평군', '가공식품류', '쌀식빵, 단호박 쌀빵, 쿠키', 'both'],
-    ['전통식혜집', '장시험', '전북', '전주시', '가공식품류', '식혜, 수정과, 단호박식혜', 'both'],
+    ['우리밀베이커리', '윤견본', '경기', '양평군', '가공식품류', '쌀식빵, 단호박 쌀빵, 쿠키', 'both', 2.5],
+    ['전통식혜집', '장시험', '전북', '전주시', '가공식품류', '식혜, 수정과, 단호박식혜', 'both', 1.5],
     ['도라지명가', '임모의', '강원', '정선군', '가공식품류', '도라지청, 도라지정과', 'both'],
-    ['산골두부', '한가짜', '강원', '평창군', '가공식품류', '두부, 순두부, 콩물', 'sat'],
+    ['산골두부', '한가짜', '강원', '평창군', '가공식품류', '두부, 순두부, 콩물', 'sat', 2],
     ['꽃차정원', '오예비', '전남', '구례군', '가공식품류', '국화차, 메리골드차, 목련차', 'both'],
     ['감말랭이농원', '서연습', '경북', '상주시', '가공식품류', '감말랭이, 곶감', 'both'],
     ['사과향기농장', '신샘플', '경북', '청송군', '과실류', '사과(홍로, 부사), 사과즙', 'both'],
@@ -2859,13 +3236,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     ['알밤농원', '장테스트', '충남', '공주시', '특용·임산물류', '알밤, 군밤', 'sun'],
     ['산골약초원', '임예제', '강원', '영월군', '특용·임산물류', '더덕, 도라지, 황기', 'both'],
     ['잣나무숲', '한보기', '경기', '가평군', '특용·임산물류', '잣, 호두', 'both'],
-    ['목장치즈공방', '오견본', '경기', '포천시', '축산류', '스트링치즈, 요거트, 우유', 'both'],
-    ['행복한닭농장', '서시험', '충북', '음성군', '축산류', '유정란, 청계란', 'both'],
+    ['목장치즈공방', '오견본', '경기', '포천시', '축산류', '스트링치즈, 요거트, 우유', 'both', 1.5],
+    ['행복한닭농장', '서시험', '충북', '음성군', '축산류', '유정란, 청계란', 'both', 1],
     ['벌꿀농원', '신모의', '전북', '무주군', '축산류', '벌꿀, 화분, 프로폴리스', 'both'],
-    ['바닷가젓갈', '권가짜', '충남', '홍성군', '수산물류', '새우젓, 명란젓, 멸치액젓', 'both'],
+    ['바닷가젓갈', '권가짜', '충남', '홍성군', '수산물류', '새우젓, 명란젓, 멸치액젓', 'both', 1],
     ['남해건어물', '황예비', '경남', '남해군', '수산물류', '멸치, 다시마, 미역', 'both'],
     ['장독대된장', '안연습', '전북', '순창군', '반찬·장류', '된장, 고추장, 청국장', 'both'],
-    ['엄마손김치', '송샘플', '전남', '해남군', '반찬·장류', '배추김치, 깍두기, 갓김치', 'both'],
+    ['엄마손김치', '송샘플', '전남', '해남군', '반찬·장류', '배추김치, 깍두기, 갓김치', 'both', 1],
     ['들녘잡곡', '전예시', '전남', '영광군', '양곡류', '현미, 찹쌀, 서리태, 귀리', 'both'],
   ];
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -3002,6 +3379,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     C.nums = FM.boothNumbers(L);
     C.insp = FM.Sim.inspect(L, C.farmById, ST());
     C.cellOf = FM.farmCellMap(L);
+    C.power = FM.Power.report(L, C.farmById, ST());
     const rank = { info: 1, warn: 2, danger: 3 };
     C.cellLevel = {};
     for (const p of C.insp.pairs)
@@ -3094,6 +3472,22 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         );
     }
     el.appendChild(h('div', { class: 'spacer' }));
+    const pw = C.power;
+    const dayKw = FM.attendingFarms(C.ev, C.day).reduce((s2, f) => s2 + FM.Power.kw(f), 0);
+    if (dayKw > 0)
+      el.appendChild(
+        h(
+          'button',
+          {
+            class: 'power-chip lv-' + (pw && pw.count ? pw.level : 'none'),
+            title: '전력 분산 보기',
+            onclick: () => (ui().mode !== 'inspect' ? App().goLayout(C.ev, C.day.id, 'inspect') : scrollSideTo('.power-sec')),
+          },
+          `⚡ ${FM.Power.fmt(dayKw)}`,
+          pw && pw.count && P > 0 ? h('small', null, pw.virtual ? ' · 구역 미지정' : ` · ${FM.Power.LEVEL_LABEL[pw.level]} (최대 ±${Math.round(pw.maxDev * 100)}%)`) : null,
+          pw && pw.genOver ? h('small', null, ' · 발전기 초과!') : null
+        )
+      );
     if (P > 0) {
       const g = C.insp.grade;
       el.appendChild(
@@ -3225,6 +3619,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       { class: cls, 'data-k': key, style, title },
       cell.dir ? h('span', { class: 'cdir d-' + cell.dir + (cell.da ? '' : ' manual') }, FM.DIR_ARROW[cell.dir]) : null,
       h('span', { class: 'cno' }, C.nums[key]),
+      cell.zone ? h('span', { class: 'czone', style: { background: FM.Power.ZONE_COLORS[cell.zone] } }, cell.zone) : null,
+      f && FM.Power.kw(f) ? h('span', { class: 'cpow', title: '전력 사용량' }, '⚡' + FM.Power.fmt(FM.Power.kw(f))) : null,
       f && L.pins[f.id] ? h('span', { class: 'cpin' }, '📌') : null,
       f ? h('div', { class: 'cname' }, FM.shortName(f.name)) : h('div', { class: 'cempty' }, '빈 자리'),
       f ? h('div', { class: 'ccat' }, f.category || '') : null
@@ -3292,6 +3688,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (u.brush === 'b') action = cell && cell.t === 'b' ? 'erase' : 'booth';
     else if (u.brush === 'l') action = cell && cell.t === 'l' && cell.label === u.labelText ? 'erase' : 'label';
     else if (u.brush === 'd') action = 'dir';
+    else if (u.brush === 'z') action = 'zone';
     else action = 'erase';
     pushHistory();
     const visited = new Set();
@@ -3304,6 +3701,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (visited.has(k)) return;
       visited.add(k);
       const cur = L.cells[k];
+      if (action === 'zone') {
+        // 구역 붓: 부스에 전력 구역(간선·분전반) 지정
+        if (cur && cur.t === 'b') {
+          const z = u.zonePick === undefined ? 'A' : u.zonePick;
+          if (z) cur.zone = z;
+          else delete cur.zone;
+          redraw(k);
+        }
+        return;
+      }
       if (action === 'dir') {
         // 방향 붓: 부스 앞면 방향 지정 (같은 줄 전체 옵션)
         const pick = u.dirPick === undefined ? 'd' : u.dirPick;
@@ -3584,7 +3991,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const keys = FM.boothKeys(L);
     if (!keys.length) return UI.toast('먼저 ② 칸 만들기에서 부스 칸을 만들어 주세요.', 'warn');
     if (!farms.length) return UI.toast('이 날 참여 농가가 없어요. ① 참여 명단에서 체크해 주세요.', 'warn');
-    if (kind === 'fix' && !C.insp.counts.danger && !C.insp.counts.warn) return UI.toast('고칠 위험·주의 자리가 없어요. 👍', 'ok');
+    const powerIssue = C.power && C.power.count && (C.power.level === 'warn' || C.power.level === 'danger' || C.power.hotPairs.length);
+    if (kind === 'fix' && !C.insp.counts.danger && !C.insp.counts.warn && !powerIssue) return UI.toast('고칠 위험·주의 자리가 없어요. 👍', 'ok');
     const idx = new Map(farms.map((f, i) => [f.id, i]));
     const cells = FM.Sim.boothCells(L, keys);
     const initial = new Int32Array(keys.length).fill(-1);
@@ -3606,6 +4014,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     setTimeout(() => {
       try {
         const { S, N1 } = FM.Sim.matrix(farms, st);
+        // 전력: 고전력끼리 떨어뜨리기 + 전력 구역(간선) 합계 균형
+        FM.Power.addToMatrix(S, N1, farms, st);
+        const power = new Float64Array(N1);
+        farms.forEach((f, i) => (power[i] = FM.Power.kw(f)));
         const res = FM.Opt.optimize({
           cells,
           S,
@@ -3615,6 +4027,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           toPlace,
           fresh: kind === 'all',
           anchorPenalty: kind === 'fix' ? 1 : 0,
+          power,
+          zone: FM.Power.zoneSetup(L, keys),
+          wZone: st.wZone,
           st,
           seed: (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0,
         });
@@ -3635,6 +4050,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           else if (after.counts.warn) msg += ' · 남은 「주의」는 한 번 더 누르거나 「⚡ 전체 다시 배치」로 줄일 수 있어요';
         }
         else msg = `${kind === 'fill' ? '빈 자리 채우기' : '자동 배치'} 완료 — 검수 ${after.grade.g}등급(${after.grade.label}) · 위험 ${after.counts.danger} · 주의 ${after.counts.warn}`;
+        if (C.power && C.power.count && !C.power.virtual) msg += ` · ⚡ 전력 ${FM.Power.LEVEL_LABEL[C.power.level]}(최대 ±${Math.round(C.power.maxDev * 100)}%)`;
         if (res.unplaced.length) msg += ` · ⚠ 칸이 부족해 ${res.unplaced.length}곳 미배치`;
         UI.toast(msg, res.unplaced.length ? 'warn' : 'ok', 5000);
       } catch (err) {
@@ -3685,9 +4101,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     side.appendChild(
       section(
         '칸 그리기',
-        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스'), brushBtn('d', '➜ 방향'), brushBtn('l', '🏷 시설'), brushBtn('x', '⌫ 지우개')),
+        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스'), brushBtn('d', '➜ 방향'), brushBtn('z', '⚡ 구역'), brushBtn('l', '🏷 시설'), brushBtn('x', '⌫')),
         u.brush === 'd'
           ? dirPicker()
+          : u.brush === 'z'
+          ? zonePicker()
           : u.brush === 'l'
           ? h(
               'div',
@@ -3717,6 +4135,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     );
 
     side.appendChild(directionSection());
+    side.appendChild(powerZoneSection());
 
     const shapeSel = h(
       'select',
@@ -4017,6 +4436,129 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     );
   }
 
+  /** 구역 붓: 구역 고르기 */
+  function zonePicker() {
+    const u = ui();
+    const pick = u.zonePick === undefined ? 'A' : u.zonePick;
+    const btn = (z) =>
+      h(
+        'button',
+        {
+          class: 'zone-btn' + (pick === z ? ' on' : ''),
+          style: z ? { borderColor: FM.Power.ZONE_COLORS[z], color: pick === z ? '#fff' : FM.Power.ZONE_COLORS[z], background: pick === z ? FM.Power.ZONE_COLORS[z] : '#fff' } : null,
+          onclick: () => {
+            u.zonePick = z;
+            renderSide();
+          },
+        },
+        z || '없음'
+      );
+    return h(
+      'div',
+      { class: 'dir-pick' },
+      h('div', { class: 'chips' }, FM.Power.ZONES.map(btn), btn(null)),
+      h('p', { class: 'muted small' }, '같은 간선(분전반)에 물리는 부스들을 같은 글자로 칠하세요. 누른 채로 끌면 여러 칸을 한 번에 칠해요. 쉽게 하려면 아래 「자동으로 나누기」를 먼저 누른 뒤 고치세요.')
+    );
+  }
+
+  /** 전력 구역(간선·분전반) 설정 */
+  function powerZoneSection() {
+    const L = LY();
+    const u = ui();
+    const zones = FM.Power.zonesIn(L);
+    const booths = Object.values(L.cells).filter((c) => c.t === 'b');
+    const unzoned = booths.filter((c) => !c.zone).length;
+    const count = {};
+    for (const c of booths) if (c.zone) count[c.zone] = (count[c.zone] || 0) + 1;
+    const nIn = h('input', { class: 'input num', type: 'number', min: 1, max: 8, value: u.zoneN || zones.length || 3 });
+    const capRow = zones.map((z) =>
+      h(
+        'label',
+        { class: 'zone-cap' },
+        h('span', { class: 'zone-tag', style: { background: FM.Power.ZONE_COLORS[z] } }, z),
+        h('small', null, `${count[z]}칸`),
+        h('input', {
+          class: 'input num',
+          type: 'number',
+          min: 0,
+          step: 0.5,
+          placeholder: '용량',
+          value: (L.zoneCaps || {})[z] || '',
+          onchange: (e) => {
+            L.zoneCaps = L.zoneCaps || {};
+            const v = +e.target.value;
+            if (v > 0) L.zoneCaps[z] = v;
+            else delete L.zoneCaps[z];
+            changed({ keepSide: true });
+          },
+        }),
+        h('small', null, 'kW')
+      )
+    );
+    return section(
+      '⚡ 전력 구역 (간선·분전반)',
+      h('p', { class: 'muted small' }, '한 간선·분전반이 맡는 부스 묶음을 구역으로 나누면, 자동 배치가 구역마다 전력 합계를 고르게 맞추고 용량을 넘지 않게 해요. 구역을 안 나눠도 전력이 큰 농가끼리는 떨어뜨려요.'),
+      h(
+        'div',
+        { class: 'row gap wrap' },
+        h('label', { class: 'inline' }, nIn, ' 구역으로'),
+        h(
+          'button',
+          {
+            class: 'btn small',
+            disabled: !booths.length,
+            onclick: async () => {
+              if (zones.length && !(await UI.confirm('지금 구역을 지우고 새로 나눌까요?', { okText: '새로 나누기' }))) return;
+              const n = Math.max(1, Math.min(8, +nIn.value || 3));
+              u.zoneN = n;
+              pushHistory();
+              FM.Power.autoZones(L, n);
+              changed();
+              UI.toast(`부스를 ${n}개 구역으로 나눴어요 (배치도의 긴 방향을 따라 같은 수로). 「⚡ 구역」 붓으로 고칠 수 있어요.`, 'ok', 4500);
+            },
+          },
+          '자동으로 나누기'
+        ),
+        zones.length
+          ? h(
+              'button',
+              {
+                class: 'btn small ghost',
+                onclick: () => {
+                  pushHistory();
+                  for (const c of Object.values(L.cells)) delete c.zone;
+                  L.zoneCaps = {};
+                  changed();
+                },
+              },
+              '구역 지우기'
+            )
+          : null
+      ),
+      zones.length ? h('div', { class: 'zone-caps' }, capRow) : null,
+      zones.length && unzoned ? h('p', { class: 'warn-text small' }, `구역이 없는 부스 ${unzoned}칸 — 「⚡ 구역」 붓으로 칠해 주세요.`) : null,
+      zones.length ? h('p', { class: 'muted small' }, '용량(kW)은 알 때만 적으세요. 모두 적으면 용량 비율대로, 아니면 부스 수 비율대로 나눠요.') : null,
+      h(
+        'label',
+        { class: 'inline small' },
+        '발전기(전체) 용량 ',
+        h('input', {
+          class: 'input num',
+          type: 'number',
+          min: 0,
+          step: 1,
+          value: L.genCap || '',
+          placeholder: '모름',
+          onchange: (e) => {
+            L.genCap = +e.target.value > 0 ? +e.target.value : '';
+            changed({ keepSide: true });
+          },
+        }),
+        ' kW'
+      )
+    );
+  }
+
   function shiftLayout(L, dr, dc) {
     const cells = {};
     const assign = {};
@@ -4233,6 +4775,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         ? h('div', null, (f.tags || []).map((t) => h('span', { class: 'tag raw', title: '원재료' }, t)), (f.forms || []).map((t) => h('span', { class: 'tag form', title: '제품 형태' }, t)))
         : null,
       L.cells[k].dir ? h('div', { class: 'muted small' }, `부스 앞면: ${FM.DIR_ARROW[L.cells[k].dir]} ${FM.DIR_LABEL[L.cells[k].dir]}쪽`) : null,
+      FM.Power.kw(f) || L.cells[k].zone
+        ? h('div', { class: 'small' }, FM.Power.kw(f) ? `⚡ 전력 ${FM.Power.fmt(FM.Power.kw(f))}` : '⚡ 전력 미입력', L.cells[k].zone ? ` · 전력 구역 ${L.cells[k].zone}` : '')
+        : null,
       h(
         'div',
         { class: 'row gap wrap' },
@@ -4329,6 +4874,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             },
             h('span', { class: 'dot', style: { background: col.mid, borderColor: col.bd } }),
             h('div', { class: 'fi-main' }, h('div', { class: 'fi-name' }, FM.shortName(f.name)), h('div', { class: 'fi-sub' }, (f.category || '') + ' · ' + f.items)),
+            FM.Power.kw(f) ? h('span', { class: 'fi-pow' }, '⚡' + FM.Power.fmt(FM.Power.kw(f))) : null,
             h('span', { class: 'fi-status' + (k ? '' : ' un') }, k ? (L.pins[f.id] ? '📌' : '') + C.nums[k] + '번' : '미배치')
           )
         );
@@ -4393,6 +4939,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         )
       )
     );
+    const pr = C.power;
+    if (pr && pr.count) side.appendChild(powerReportSection(pr));
     const rs = ins.rawStats;
     if (rs)
       side.appendChild(
@@ -4555,6 +5103,69 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       )
     );
     side.appendChild(nextBtn('다음: ⑤ 저장·출력 →', 'export'));
+  }
+
+  /** ④ 검수: 전력 분산 결과 */
+  function powerReportSection(pr) {
+    const maxLoad = Math.max(...pr.zones.map((z) => Math.max(z.load, z.cap || 0, z.target)), 0.001);
+    const box = h(
+      'section',
+      { class: 'side-sec power-sec lv-' + pr.level },
+      h('h4', null, '⚡ 전력 분산 ', h('span', { class: 'power-level' }, FM.Power.LEVEL_LABEL[pr.level])),
+      h(
+        'p',
+        { class: 'small' },
+        `전력 입력 농가 ${pr.count}곳 · 합계 ${FM.Power.fmt(pr.total)}`,
+        pr.gen ? ` / 발전기 ${FM.Power.fmt(pr.gen)}` : '',
+        pr.genOver ? h('b', { class: 'warn-text' }, ' ⚠ 발전기 용량 초과') : ''
+      ),
+      pr.virtual
+        ? h('p', { class: 'muted small' }, `전력 구역을 안 나눠서 배치도를 ${pr.virtualWide ? '왼쪽·가운데·오른쪽' : '위·가운데·아래'} 3구간으로 나눠 참고로 보여줘요. ② 칸 만들기에서 「⚡ 전력 구역」을 나누면 구역별로 맞춰 드려요.`)
+        : null,
+      h(
+        'div',
+        { class: 'zone-bars' },
+        pr.zones.map((z) =>
+          h(
+            'div',
+            { class: 'zone-bar-row' },
+            h('span', { class: 'zone-tag', style: { background: FM.Power.ZONE_COLORS[z.z] } }, pr.virtual ? (pr.virtualWide ? ['왼', '가', '오'][FM.Power.ZONES.indexOf(z.z)] : ['위', '가', '아'][FM.Power.ZONES.indexOf(z.z)]) : z.z),
+            h(
+              'div',
+              { class: 'zone-bar' },
+              h('div', { class: 'zb-fill lv-' + z.level, style: { width: Math.min(100, (z.load / maxLoad) * 100) + '%' } }),
+              h('div', { class: 'zb-target', style: { left: Math.min(100, (z.target / maxLoad) * 100) + '%' }, title: '목표' }),
+              z.cap ? h('div', { class: 'zb-cap', style: { left: Math.min(100, (z.cap / maxLoad) * 100) + '%' }, title: '용량' }) : null
+            ),
+            h('span', { class: 'zb-val' }, FM.Power.fmt(z.load), h('small', null, ` (${z.dev >= 0 ? '+' : ''}${Math.round(z.dev * 100)}%)`), z.over ? h('b', { class: 'warn-text' }, ' 초과') : null)
+          )
+        )
+      ),
+      h('p', { class: 'muted small' }, '세로 선 = 목표(부스 수 또는 용량 비율), 빨간 선 = 용량. ±15% 안이면 고름, 30% 넘으면 치우침.'),
+      pr.hotPairs.length
+        ? h(
+            'div',
+            { class: 'mini-conf' },
+            h('small', null, '전력 큰 농가끼리 붙어 있어요 (같은 분기 회로 주의)'),
+            pr.hotPairs.slice(0, 6).map((hp) =>
+              h(
+                'button',
+                { class: 'link-btn small', onclick: () => setHighlight({ a: hp.a.key, b: hp.b.key }) || scrollToCell(hp.a.key) },
+                `${C.nums[hp.a.key]}번 ${FM.shortName(hp.a.farm.name)} ${FM.Power.fmt(hp.a.kw)} ↔ ${C.nums[hp.b.key]}번 ${FM.shortName(hp.b.farm.name)} ${FM.Power.fmt(hp.b.kw)} · ${hp.label}`
+              )
+            )
+          )
+        : h('p', { class: 'ok-text small' }, '✓ 전력 큰 농가끼리 붙어 있지 않아요'),
+      pr.level === 'warn' || pr.level === 'danger' || pr.hotPairs.length
+        ? h('div', { class: 'row gap wrap' }, h('button', { class: 'btn small', onclick: () => runAuto('all') }, '⚡ 전력까지 맞춰 다시 배치'), h('button', { class: 'btn small ghost', onclick: () => runAuto('fix') }, '🩹 문제 자리만 고치기'))
+        : null
+    );
+    return box;
+  }
+
+  function scrollSideTo(sel) {
+    const el = C.els.side.querySelector(sel);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function scrollToCell(key) {
@@ -5284,6 +5895,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const s = App.dayStats(ev, d);
         return h('span', { class: 'chip day' }, `${FM.weekday(d.date)} ${FM.fmtDay(d.date).replace(/\(.\)$/, '')} ${d.round ? '· ' + d.round + ' ' : ''}참여 `, h('b', null, s.attending + '곳'));
       }),
+      (() => {
+        const pf = ev.farms.filter((f) => FM.Power.kw(f));
+        if (!pf.length) return h('span', { class: 'chip power', title: '명단 엑셀의 「장소」 바로 뒤 열에 kW를 적거나, 아래 표의 ⚡ 칸에 바로 입력하세요' }, '⚡ 전력 입력 0곳');
+        return h(
+          'span',
+          { class: 'chip power', title: '전력 사용량이 입력된 농가 수와 날짜별 합계' },
+          `⚡ 전력 입력 ${pf.length}곳 · `,
+          ev.days.map((d, i) => h('b', null, (i ? ' / ' : '') + FM.weekday(d.date) + ' ' + FM.Power.fmt(FM.attendingFarms(ev, d).reduce((s2, f) => s2 + FM.Power.kw(f), 0))))
+        );
+      })(),
       h('span', { class: 'muted small' }, '체크를 풀면 그날 불참(취소)으로, 체크하면 참여로 바뀌어요. 배치도에도 바로 반영돼요.')
     );
     container.appendChild(summary);
@@ -5371,6 +5992,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           h('th', { title: '비슷한 품목 판단에 쓰는 원재료(파랑)·제품 형태(회색). 농가 수정에서 바꿀 수 있어요' }, '원재료 · 형태'),
           h('th', null, '신규'),
           h('th', null, '장소'),
+          h('th', { class: 'th-power', title: '전력 사용량(kW). 칸에 바로 적거나 고칠 수 있어요. 비우면 모름/적음' }, '⚡전력(kW)'),
           h('th', null, '')
         )
       );
@@ -5420,6 +6042,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             h('td', { class: 'nowrap' }, f.place),
             h(
               'td',
+              { class: 'td-power' },
+              h('input', {
+                class: 'input pow-input' + (FM.Power.kw(f) ? ' has' : ''),
+                type: 'number',
+                min: 0,
+                step: 0.1,
+                value: FM.Power.kw(f) || '',
+                placeholder: '-',
+                title: '전력 사용량 kW',
+                onchange: (e) => {
+                  f.power = FM.Power.parse(e.target.value);
+                  e.target.classList.toggle('has', !!FM.Power.kw(f));
+                  App.changed();
+                },
+              })
+            ),
+            h(
+              'td',
               { class: 'nowrap' },
               h('button', { class: 'icon-btn', title: '수정', 'aria-label': '수정', onclick: () => openFarmEditor(ev, f) }, '✏️'),
               h('button', { class: 'icon-btn', title: '삭제', 'aria-label': '삭제', onclick: () => deleteFarm(ev, f) }, '🗑')
@@ -5467,8 +6107,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function loadSample(ev) {
     const [first, ...rest] = ev.days;
     const last = rest.length ? rest[rest.length - 1] : null;
-    FM.SAMPLE_FARMS.forEach(([name, owner, sido, sigungu, category, items, when], i) => {
-      const f = FM.newFarm({ no: i + 1, name, owner, sido, sigungu, category, items, phone: '010-0000-' + String(i + 1).padStart(4, '0'), place: App.venue(ev.venueId).short, isNew: i % 3 === 0 ? 'ㅇ' : '×', memo: '연습용 예시' });
+    FM.SAMPLE_FARMS.forEach(([name, owner, sido, sigungu, category, items, when, power], i) => {
+      const f = FM.newFarm({ no: i + 1, name, owner, sido, sigungu, category, items, power: power || '', phone: '010-0000-' + String(i + 1).padStart(4, '0'), place: App.venue(ev.venueId).short, isNew: i % 3 === 0 ? 'ㅇ' : '×', memo: '연습용 예시' });
       for (const d of ev.days) f.days[d.id] = true;
       if (when === 'sat' && last) delete f.days[last.id];
       if (when === 'sun' && first && last) delete f.days[first.id];
@@ -5579,6 +6219,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             '자동으로 다시 뽑기'
           )
         )
+      ),
+      h(
+        'label',
+        { class: 'field' },
+        h('span', null, '⚡ 전력 사용량 (kW)'),
+        h('input', {
+          class: 'input',
+          type: 'number',
+          min: 0,
+          step: 0.1,
+          value: FM.Power.kw(d) || '',
+          placeholder: '모르면 비워 두세요',
+          oninput: (e) => (d.power = FM.Power.parse(e.target.value)),
+        })
       ),
       field('신규여부', 'isNew', { placeholder: 'ㅇ / ×' }),
       field('장소', 'place'),
@@ -5722,7 +6376,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (fromExcel) list = FM.Excel.rowsToFarms(opt.wbData.sheets[S.sheet].rows, S.headerRow, S.map, S.dayCols);
       else
         list = opt.fromEvent.farms.map((f, i) => ({
-          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
+          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, power: f.power, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
           dayVals: {},
           rowNo: i + 1,
         }));
@@ -5948,7 +6602,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                   else cands.forEach((_, i) => S.excluded.add(i));
                   draw();
                 },
-              })), h('th', null, '행'), h('th', null, '농가명'), h('th', null, '대표자'), h('th', null, '품목군'), h('th', null, '신청품목'), h('th', null, '장소'), h('th', null, '상태'))),
+              })), h('th', null, '행'), h('th', null, '농가명'), h('th', null, '대표자'), h('th', null, '품목군'), h('th', null, '신청품목'), h('th', null, '장소'), h('th', null, '⚡kW'), h('th', null, '상태'))),
               h(
                 'tbody',
                 null,
@@ -5974,6 +6628,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                     h('td', null, c.data.category),
                     h('td', { class: 'td-items' }, c.data.items),
                     h('td', null, c.data.place),
+                    h('td', { class: 'nowrap' }, FM.Power.kw(c.data) ? FM.Power.fmt(FM.Power.kw(c.data)) : ''),
                     h('td', null, hidden ? h('span', { class: 'badge b-past' }, '다른 장소') : c.existing ? h('span', { class: 'badge b-future' }, '이미 있음') : h('span', { class: 'badge b-today' }, '새 농가'))
                   );
                 })
@@ -6203,7 +6858,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         h('h4', null, '0. 파일 열기'),
         h('p', null, '받은 「농부의시장_배치도.html」 파일을 더블클릭하면 크롬/엣지에서 열려요. 인터넷이 없어도 동작해요. 작업은 자동 저장돼요.'),
         h('h4', null, '① 참여 명단'),
-        h('ul', null, h('li', null, '일정을 누르고 「📥 엑셀 명단 넣기」로 명단 엑셀을 넣어요. 「장소」 열이 있으면 해당 장소 농가만 골라 줘요.'), h('li', null, '날짜(토/일)별 체크로 참여 여부를 정해요. 취소된 농가는 체크를 풀고, 추가 농가는 「엑셀로 추가 명단 넣기」나 「농가 직접 추가」로 넣어요.')),
+        h('ul', null, h('li', null, '일정을 누르고 「📥 엑셀 명단 넣기」로 명단 엑셀을 넣어요. 「장소」 열이 있으면 해당 장소 농가만 골라 줘요.'), h('li', null, '날짜(토/일)별 체크로 참여 여부를 정해요. 취소된 농가는 체크를 풀고, 추가 농가는 「엑셀로 추가 명단 넣기」나 「농가 직접 추가」로 넣어요.'), h('li', null, '⚡ 전력 사용량: 명단 엑셀의 「장소」 바로 뒤 열에 kW 숫자를 적으면 자동으로 읽어요(전력이 큰 농가만 적어도 돼요). 명단 표의 ⚡ 칸이나 농가 수정 창에서 바로 넣고 고칠 수 있어요.')),
         h('h4', null, '② 칸 만들기'),
         h(
           'ul',
@@ -6211,6 +6866,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           h('li', null, '격자를 클릭·드래그해서 부스 칸을 만들어요. 한 칸 = 농가 한 곳. 격자 끝까지 칠하면 자동으로 넓어져요.'),
           h('li', null, '위쪽 숫자가 「남은 칸 수」예요. 0이 되면 참여 농가 수와 딱 맞아요.'),
           h('li', null, '부스 앞면(손님 쪽) 방향 ▲▼◀▶ 은 자동으로 정해져요. 틀린 줄은 「➜ 방향」 붓으로 방향을 고르고 그 줄의 부스 하나만 클릭하면 줄 전체가 바뀌어요. 통로 건너 마주 보는 부스는 바로 옆처럼 떨어뜨려요.'),
+          h('li', null, '⚡ 전력 구역: 「⚡ 전력 구역」에서 구역 수를 정하고 「자동으로 나누기」를 누르면 간선·분전반 구역(A·B·C…)이 나뉘어요. 구역 용량·발전기 용량을 알면 적어 두세요. 「⚡ 구역」 붓으로 고칠 수 있어요.'),
           h('li', null, '장소마다 모양이 다르니 한 번 만든 모양은 「장소 기본형으로 저장」해 두면 다음 일정에서 불러올 수 있어요.')
         ),
         h('h4', null, '③ 농가 배치'),
@@ -6221,7 +6877,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           null,
           h('li', null, '원재료가 같으면(사과↔사과즙, 참깨↔참기름, 포도↔와인) 결과물이 달라도 비슷한 품목으로 봐요. 즙·청·떡·젓갈처럼 같은 형태, 같은 품목군도 함께 봐요.'),
           h('li', null, '가까이 붙거나 통로 건너 마주 보는 곳을 선으로 이어 보여줘요. 선 색이 다르면 다른 원재료·형태예요.'),
-          h('li', null, '위험(빨강) = 같은 원재료가 바로 옆·대각선·마주봄, 주의(주황) = 2칸 거리 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.')
+          h('li', null, '위험(빨강) = 같은 원재료가 바로 옆·대각선·마주봄, 주의(주황) = 2칸 거리 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.'),
+          h('li', null, '⚡ 전력 분산: 구역별 kW 합계와 목표·용량을 막대로 보여주고, 전력 큰 농가끼리 붙은 곳을 알려줘요. 자동 배치는 전력까지 함께 맞춰요.')
         ),
         h('h4', null, '⑤ 저장·출력·공유'),
         h('ul', null, h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요. 배치가 끝나면 배치 화면 위의 「🖼 그림 저장」으로 바로 저장해도 돼요.'), h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')),
@@ -6360,6 +7017,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           '줄 배치에서 위아래 칸이 서로 등을 맞대고 있다면 2배를 고르세요.'
         )
       ),
+      h('h4', null, '⚡ 전력 분산'),
+      h(
+        'p',
+        { class: 'muted small' },
+        '전력 사용량(kW)이 입력된 농가는 ① 큰 농가끼리 붙지 않게(같은 분기 회로), ② 전력 구역(간선·분전반)마다 합계가 고르게, ③ 구역 용량을 넘지 않게 배치해요. 구역은 ② 칸 만들기의 「⚡ 전력 구역」에서 나눠요.'
+      ),
+      h('div', { class: 'grid2' }, slider('고전력 농가끼리 떨어뜨리기', 'wPow', 0, 1.5, 0.1, (v) => v.toFixed(1)), slider('구역별 합계 고르게', 'wZone', 0, 10, 0.5, (v) => v.toFixed(1))),
       h('h4', null, '원재료 사전'),
       h(
         'p',

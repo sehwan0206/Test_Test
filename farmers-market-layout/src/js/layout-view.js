@@ -128,6 +128,7 @@
     C.nums = FM.boothNumbers(L);
     C.insp = FM.Sim.inspect(L, C.farmById, ST());
     C.cellOf = FM.farmCellMap(L);
+    C.power = FM.Power.report(L, C.farmById, ST());
     const rank = { info: 1, warn: 2, danger: 3 };
     C.cellLevel = {};
     for (const p of C.insp.pairs)
@@ -220,6 +221,22 @@
         );
     }
     el.appendChild(h('div', { class: 'spacer' }));
+    const pw = C.power;
+    const dayKw = FM.attendingFarms(C.ev, C.day).reduce((s2, f) => s2 + FM.Power.kw(f), 0);
+    if (dayKw > 0)
+      el.appendChild(
+        h(
+          'button',
+          {
+            class: 'power-chip lv-' + (pw && pw.count ? pw.level : 'none'),
+            title: '전력 분산 보기',
+            onclick: () => (ui().mode !== 'inspect' ? App().goLayout(C.ev, C.day.id, 'inspect') : scrollSideTo('.power-sec')),
+          },
+          `⚡ ${FM.Power.fmt(dayKw)}`,
+          pw && pw.count && P > 0 ? h('small', null, pw.virtual ? ' · 구역 미지정' : ` · ${FM.Power.LEVEL_LABEL[pw.level]} (최대 ±${Math.round(pw.maxDev * 100)}%)`) : null,
+          pw && pw.genOver ? h('small', null, ' · 발전기 초과!') : null
+        )
+      );
     if (P > 0) {
       const g = C.insp.grade;
       el.appendChild(
@@ -351,6 +368,8 @@
       { class: cls, 'data-k': key, style, title },
       cell.dir ? h('span', { class: 'cdir d-' + cell.dir + (cell.da ? '' : ' manual') }, FM.DIR_ARROW[cell.dir]) : null,
       h('span', { class: 'cno' }, C.nums[key]),
+      cell.zone ? h('span', { class: 'czone', style: { background: FM.Power.ZONE_COLORS[cell.zone] } }, cell.zone) : null,
+      f && FM.Power.kw(f) ? h('span', { class: 'cpow', title: '전력 사용량' }, '⚡' + FM.Power.fmt(FM.Power.kw(f))) : null,
       f && L.pins[f.id] ? h('span', { class: 'cpin' }, '📌') : null,
       f ? h('div', { class: 'cname' }, FM.shortName(f.name)) : h('div', { class: 'cempty' }, '빈 자리'),
       f ? h('div', { class: 'ccat' }, f.category || '') : null
@@ -418,6 +437,7 @@
     if (u.brush === 'b') action = cell && cell.t === 'b' ? 'erase' : 'booth';
     else if (u.brush === 'l') action = cell && cell.t === 'l' && cell.label === u.labelText ? 'erase' : 'label';
     else if (u.brush === 'd') action = 'dir';
+    else if (u.brush === 'z') action = 'zone';
     else action = 'erase';
     pushHistory();
     const visited = new Set();
@@ -430,6 +450,16 @@
       if (visited.has(k)) return;
       visited.add(k);
       const cur = L.cells[k];
+      if (action === 'zone') {
+        // 구역 붓: 부스에 전력 구역(간선·분전반) 지정
+        if (cur && cur.t === 'b') {
+          const z = u.zonePick === undefined ? 'A' : u.zonePick;
+          if (z) cur.zone = z;
+          else delete cur.zone;
+          redraw(k);
+        }
+        return;
+      }
       if (action === 'dir') {
         // 방향 붓: 부스 앞면 방향 지정 (같은 줄 전체 옵션)
         const pick = u.dirPick === undefined ? 'd' : u.dirPick;
@@ -710,7 +740,8 @@
     const keys = FM.boothKeys(L);
     if (!keys.length) return UI.toast('먼저 ② 칸 만들기에서 부스 칸을 만들어 주세요.', 'warn');
     if (!farms.length) return UI.toast('이 날 참여 농가가 없어요. ① 참여 명단에서 체크해 주세요.', 'warn');
-    if (kind === 'fix' && !C.insp.counts.danger && !C.insp.counts.warn) return UI.toast('고칠 위험·주의 자리가 없어요. 👍', 'ok');
+    const powerIssue = C.power && C.power.count && (C.power.level === 'warn' || C.power.level === 'danger' || C.power.hotPairs.length);
+    if (kind === 'fix' && !C.insp.counts.danger && !C.insp.counts.warn && !powerIssue) return UI.toast('고칠 위험·주의 자리가 없어요. 👍', 'ok');
     const idx = new Map(farms.map((f, i) => [f.id, i]));
     const cells = FM.Sim.boothCells(L, keys);
     const initial = new Int32Array(keys.length).fill(-1);
@@ -732,6 +763,10 @@
     setTimeout(() => {
       try {
         const { S, N1 } = FM.Sim.matrix(farms, st);
+        // 전력: 고전력끼리 떨어뜨리기 + 전력 구역(간선) 합계 균형
+        FM.Power.addToMatrix(S, N1, farms, st);
+        const power = new Float64Array(N1);
+        farms.forEach((f, i) => (power[i] = FM.Power.kw(f)));
         const res = FM.Opt.optimize({
           cells,
           S,
@@ -741,6 +776,9 @@
           toPlace,
           fresh: kind === 'all',
           anchorPenalty: kind === 'fix' ? 1 : 0,
+          power,
+          zone: FM.Power.zoneSetup(L, keys),
+          wZone: st.wZone,
           st,
           seed: (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0,
         });
@@ -761,6 +799,7 @@
           else if (after.counts.warn) msg += ' · 남은 「주의」는 한 번 더 누르거나 「⚡ 전체 다시 배치」로 줄일 수 있어요';
         }
         else msg = `${kind === 'fill' ? '빈 자리 채우기' : '자동 배치'} 완료 — 검수 ${after.grade.g}등급(${after.grade.label}) · 위험 ${after.counts.danger} · 주의 ${after.counts.warn}`;
+        if (C.power && C.power.count && !C.power.virtual) msg += ` · ⚡ 전력 ${FM.Power.LEVEL_LABEL[C.power.level]}(최대 ±${Math.round(C.power.maxDev * 100)}%)`;
         if (res.unplaced.length) msg += ` · ⚠ 칸이 부족해 ${res.unplaced.length}곳 미배치`;
         UI.toast(msg, res.unplaced.length ? 'warn' : 'ok', 5000);
       } catch (err) {
@@ -811,9 +850,11 @@
     side.appendChild(
       section(
         '칸 그리기',
-        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스'), brushBtn('d', '➜ 방향'), brushBtn('l', '🏷 시설'), brushBtn('x', '⌫ 지우개')),
+        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스'), brushBtn('d', '➜ 방향'), brushBtn('z', '⚡ 구역'), brushBtn('l', '🏷 시설'), brushBtn('x', '⌫')),
         u.brush === 'd'
           ? dirPicker()
+          : u.brush === 'z'
+          ? zonePicker()
           : u.brush === 'l'
           ? h(
               'div',
@@ -843,6 +884,7 @@
     );
 
     side.appendChild(directionSection());
+    side.appendChild(powerZoneSection());
 
     const shapeSel = h(
       'select',
@@ -1143,6 +1185,129 @@
     );
   }
 
+  /** 구역 붓: 구역 고르기 */
+  function zonePicker() {
+    const u = ui();
+    const pick = u.zonePick === undefined ? 'A' : u.zonePick;
+    const btn = (z) =>
+      h(
+        'button',
+        {
+          class: 'zone-btn' + (pick === z ? ' on' : ''),
+          style: z ? { borderColor: FM.Power.ZONE_COLORS[z], color: pick === z ? '#fff' : FM.Power.ZONE_COLORS[z], background: pick === z ? FM.Power.ZONE_COLORS[z] : '#fff' } : null,
+          onclick: () => {
+            u.zonePick = z;
+            renderSide();
+          },
+        },
+        z || '없음'
+      );
+    return h(
+      'div',
+      { class: 'dir-pick' },
+      h('div', { class: 'chips' }, FM.Power.ZONES.map(btn), btn(null)),
+      h('p', { class: 'muted small' }, '같은 간선(분전반)에 물리는 부스들을 같은 글자로 칠하세요. 누른 채로 끌면 여러 칸을 한 번에 칠해요. 쉽게 하려면 아래 「자동으로 나누기」를 먼저 누른 뒤 고치세요.')
+    );
+  }
+
+  /** 전력 구역(간선·분전반) 설정 */
+  function powerZoneSection() {
+    const L = LY();
+    const u = ui();
+    const zones = FM.Power.zonesIn(L);
+    const booths = Object.values(L.cells).filter((c) => c.t === 'b');
+    const unzoned = booths.filter((c) => !c.zone).length;
+    const count = {};
+    for (const c of booths) if (c.zone) count[c.zone] = (count[c.zone] || 0) + 1;
+    const nIn = h('input', { class: 'input num', type: 'number', min: 1, max: 8, value: u.zoneN || zones.length || 3 });
+    const capRow = zones.map((z) =>
+      h(
+        'label',
+        { class: 'zone-cap' },
+        h('span', { class: 'zone-tag', style: { background: FM.Power.ZONE_COLORS[z] } }, z),
+        h('small', null, `${count[z]}칸`),
+        h('input', {
+          class: 'input num',
+          type: 'number',
+          min: 0,
+          step: 0.5,
+          placeholder: '용량',
+          value: (L.zoneCaps || {})[z] || '',
+          onchange: (e) => {
+            L.zoneCaps = L.zoneCaps || {};
+            const v = +e.target.value;
+            if (v > 0) L.zoneCaps[z] = v;
+            else delete L.zoneCaps[z];
+            changed({ keepSide: true });
+          },
+        }),
+        h('small', null, 'kW')
+      )
+    );
+    return section(
+      '⚡ 전력 구역 (간선·분전반)',
+      h('p', { class: 'muted small' }, '한 간선·분전반이 맡는 부스 묶음을 구역으로 나누면, 자동 배치가 구역마다 전력 합계를 고르게 맞추고 용량을 넘지 않게 해요. 구역을 안 나눠도 전력이 큰 농가끼리는 떨어뜨려요.'),
+      h(
+        'div',
+        { class: 'row gap wrap' },
+        h('label', { class: 'inline' }, nIn, ' 구역으로'),
+        h(
+          'button',
+          {
+            class: 'btn small',
+            disabled: !booths.length,
+            onclick: async () => {
+              if (zones.length && !(await UI.confirm('지금 구역을 지우고 새로 나눌까요?', { okText: '새로 나누기' }))) return;
+              const n = Math.max(1, Math.min(8, +nIn.value || 3));
+              u.zoneN = n;
+              pushHistory();
+              FM.Power.autoZones(L, n);
+              changed();
+              UI.toast(`부스를 ${n}개 구역으로 나눴어요 (배치도의 긴 방향을 따라 같은 수로). 「⚡ 구역」 붓으로 고칠 수 있어요.`, 'ok', 4500);
+            },
+          },
+          '자동으로 나누기'
+        ),
+        zones.length
+          ? h(
+              'button',
+              {
+                class: 'btn small ghost',
+                onclick: () => {
+                  pushHistory();
+                  for (const c of Object.values(L.cells)) delete c.zone;
+                  L.zoneCaps = {};
+                  changed();
+                },
+              },
+              '구역 지우기'
+            )
+          : null
+      ),
+      zones.length ? h('div', { class: 'zone-caps' }, capRow) : null,
+      zones.length && unzoned ? h('p', { class: 'warn-text small' }, `구역이 없는 부스 ${unzoned}칸 — 「⚡ 구역」 붓으로 칠해 주세요.`) : null,
+      zones.length ? h('p', { class: 'muted small' }, '용량(kW)은 알 때만 적으세요. 모두 적으면 용량 비율대로, 아니면 부스 수 비율대로 나눠요.') : null,
+      h(
+        'label',
+        { class: 'inline small' },
+        '발전기(전체) 용량 ',
+        h('input', {
+          class: 'input num',
+          type: 'number',
+          min: 0,
+          step: 1,
+          value: L.genCap || '',
+          placeholder: '모름',
+          onchange: (e) => {
+            L.genCap = +e.target.value > 0 ? +e.target.value : '';
+            changed({ keepSide: true });
+          },
+        }),
+        ' kW'
+      )
+    );
+  }
+
   function shiftLayout(L, dr, dc) {
     const cells = {};
     const assign = {};
@@ -1359,6 +1524,9 @@
         ? h('div', null, (f.tags || []).map((t) => h('span', { class: 'tag raw', title: '원재료' }, t)), (f.forms || []).map((t) => h('span', { class: 'tag form', title: '제품 형태' }, t)))
         : null,
       L.cells[k].dir ? h('div', { class: 'muted small' }, `부스 앞면: ${FM.DIR_ARROW[L.cells[k].dir]} ${FM.DIR_LABEL[L.cells[k].dir]}쪽`) : null,
+      FM.Power.kw(f) || L.cells[k].zone
+        ? h('div', { class: 'small' }, FM.Power.kw(f) ? `⚡ 전력 ${FM.Power.fmt(FM.Power.kw(f))}` : '⚡ 전력 미입력', L.cells[k].zone ? ` · 전력 구역 ${L.cells[k].zone}` : '')
+        : null,
       h(
         'div',
         { class: 'row gap wrap' },
@@ -1455,6 +1623,7 @@
             },
             h('span', { class: 'dot', style: { background: col.mid, borderColor: col.bd } }),
             h('div', { class: 'fi-main' }, h('div', { class: 'fi-name' }, FM.shortName(f.name)), h('div', { class: 'fi-sub' }, (f.category || '') + ' · ' + f.items)),
+            FM.Power.kw(f) ? h('span', { class: 'fi-pow' }, '⚡' + FM.Power.fmt(FM.Power.kw(f))) : null,
             h('span', { class: 'fi-status' + (k ? '' : ' un') }, k ? (L.pins[f.id] ? '📌' : '') + C.nums[k] + '번' : '미배치')
           )
         );
@@ -1519,6 +1688,8 @@
         )
       )
     );
+    const pr = C.power;
+    if (pr && pr.count) side.appendChild(powerReportSection(pr));
     const rs = ins.rawStats;
     if (rs)
       side.appendChild(
@@ -1681,6 +1852,69 @@
       )
     );
     side.appendChild(nextBtn('다음: ⑤ 저장·출력 →', 'export'));
+  }
+
+  /** ④ 검수: 전력 분산 결과 */
+  function powerReportSection(pr) {
+    const maxLoad = Math.max(...pr.zones.map((z) => Math.max(z.load, z.cap || 0, z.target)), 0.001);
+    const box = h(
+      'section',
+      { class: 'side-sec power-sec lv-' + pr.level },
+      h('h4', null, '⚡ 전력 분산 ', h('span', { class: 'power-level' }, FM.Power.LEVEL_LABEL[pr.level])),
+      h(
+        'p',
+        { class: 'small' },
+        `전력 입력 농가 ${pr.count}곳 · 합계 ${FM.Power.fmt(pr.total)}`,
+        pr.gen ? ` / 발전기 ${FM.Power.fmt(pr.gen)}` : '',
+        pr.genOver ? h('b', { class: 'warn-text' }, ' ⚠ 발전기 용량 초과') : ''
+      ),
+      pr.virtual
+        ? h('p', { class: 'muted small' }, `전력 구역을 안 나눠서 배치도를 ${pr.virtualWide ? '왼쪽·가운데·오른쪽' : '위·가운데·아래'} 3구간으로 나눠 참고로 보여줘요. ② 칸 만들기에서 「⚡ 전력 구역」을 나누면 구역별로 맞춰 드려요.`)
+        : null,
+      h(
+        'div',
+        { class: 'zone-bars' },
+        pr.zones.map((z) =>
+          h(
+            'div',
+            { class: 'zone-bar-row' },
+            h('span', { class: 'zone-tag', style: { background: FM.Power.ZONE_COLORS[z.z] } }, pr.virtual ? (pr.virtualWide ? ['왼', '가', '오'][FM.Power.ZONES.indexOf(z.z)] : ['위', '가', '아'][FM.Power.ZONES.indexOf(z.z)]) : z.z),
+            h(
+              'div',
+              { class: 'zone-bar' },
+              h('div', { class: 'zb-fill lv-' + z.level, style: { width: Math.min(100, (z.load / maxLoad) * 100) + '%' } }),
+              h('div', { class: 'zb-target', style: { left: Math.min(100, (z.target / maxLoad) * 100) + '%' }, title: '목표' }),
+              z.cap ? h('div', { class: 'zb-cap', style: { left: Math.min(100, (z.cap / maxLoad) * 100) + '%' }, title: '용량' }) : null
+            ),
+            h('span', { class: 'zb-val' }, FM.Power.fmt(z.load), h('small', null, ` (${z.dev >= 0 ? '+' : ''}${Math.round(z.dev * 100)}%)`), z.over ? h('b', { class: 'warn-text' }, ' 초과') : null)
+          )
+        )
+      ),
+      h('p', { class: 'muted small' }, '세로 선 = 목표(부스 수 또는 용량 비율), 빨간 선 = 용량. ±15% 안이면 고름, 30% 넘으면 치우침.'),
+      pr.hotPairs.length
+        ? h(
+            'div',
+            { class: 'mini-conf' },
+            h('small', null, '전력 큰 농가끼리 붙어 있어요 (같은 분기 회로 주의)'),
+            pr.hotPairs.slice(0, 6).map((hp) =>
+              h(
+                'button',
+                { class: 'link-btn small', onclick: () => setHighlight({ a: hp.a.key, b: hp.b.key }) || scrollToCell(hp.a.key) },
+                `${C.nums[hp.a.key]}번 ${FM.shortName(hp.a.farm.name)} ${FM.Power.fmt(hp.a.kw)} ↔ ${C.nums[hp.b.key]}번 ${FM.shortName(hp.b.farm.name)} ${FM.Power.fmt(hp.b.kw)} · ${hp.label}`
+              )
+            )
+          )
+        : h('p', { class: 'ok-text small' }, '✓ 전력 큰 농가끼리 붙어 있지 않아요'),
+      pr.level === 'warn' || pr.level === 'danger' || pr.hotPairs.length
+        ? h('div', { class: 'row gap wrap' }, h('button', { class: 'btn small', onclick: () => runAuto('all') }, '⚡ 전력까지 맞춰 다시 배치'), h('button', { class: 'btn small ghost', onclick: () => runAuto('fix') }, '🩹 문제 자리만 고치기'))
+        : null
+    );
+    return box;
+  }
+
+  function scrollSideTo(sel) {
+    const el = C.els.side.querySelector(sel);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function scrollToCell(key) {

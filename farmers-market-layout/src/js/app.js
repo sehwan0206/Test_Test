@@ -606,6 +606,16 @@
         const s = App.dayStats(ev, d);
         return h('span', { class: 'chip day' }, `${FM.weekday(d.date)} ${FM.fmtDay(d.date).replace(/\(.\)$/, '')} ${d.round ? '· ' + d.round + ' ' : ''}참여 `, h('b', null, s.attending + '곳'));
       }),
+      (() => {
+        const pf = ev.farms.filter((f) => FM.Power.kw(f));
+        if (!pf.length) return h('span', { class: 'chip power', title: '명단 엑셀의 「장소」 바로 뒤 열에 kW를 적거나, 아래 표의 ⚡ 칸에 바로 입력하세요' }, '⚡ 전력 입력 0곳');
+        return h(
+          'span',
+          { class: 'chip power', title: '전력 사용량이 입력된 농가 수와 날짜별 합계' },
+          `⚡ 전력 입력 ${pf.length}곳 · `,
+          ev.days.map((d, i) => h('b', null, (i ? ' / ' : '') + FM.weekday(d.date) + ' ' + FM.Power.fmt(FM.attendingFarms(ev, d).reduce((s2, f) => s2 + FM.Power.kw(f), 0))))
+        );
+      })(),
       h('span', { class: 'muted small' }, '체크를 풀면 그날 불참(취소)으로, 체크하면 참여로 바뀌어요. 배치도에도 바로 반영돼요.')
     );
     container.appendChild(summary);
@@ -693,6 +703,7 @@
           h('th', { title: '비슷한 품목 판단에 쓰는 원재료(파랑)·제품 형태(회색). 농가 수정에서 바꿀 수 있어요' }, '원재료 · 형태'),
           h('th', null, '신규'),
           h('th', null, '장소'),
+          h('th', { class: 'th-power', title: '전력 사용량(kW). 칸에 바로 적거나 고칠 수 있어요. 비우면 모름/적음' }, '⚡전력(kW)'),
           h('th', null, '')
         )
       );
@@ -742,6 +753,24 @@
             h('td', { class: 'nowrap' }, f.place),
             h(
               'td',
+              { class: 'td-power' },
+              h('input', {
+                class: 'input pow-input' + (FM.Power.kw(f) ? ' has' : ''),
+                type: 'number',
+                min: 0,
+                step: 0.1,
+                value: FM.Power.kw(f) || '',
+                placeholder: '-',
+                title: '전력 사용량 kW',
+                onchange: (e) => {
+                  f.power = FM.Power.parse(e.target.value);
+                  e.target.classList.toggle('has', !!FM.Power.kw(f));
+                  App.changed();
+                },
+              })
+            ),
+            h(
+              'td',
               { class: 'nowrap' },
               h('button', { class: 'icon-btn', title: '수정', 'aria-label': '수정', onclick: () => openFarmEditor(ev, f) }, '✏️'),
               h('button', { class: 'icon-btn', title: '삭제', 'aria-label': '삭제', onclick: () => deleteFarm(ev, f) }, '🗑')
@@ -789,8 +818,8 @@
   function loadSample(ev) {
     const [first, ...rest] = ev.days;
     const last = rest.length ? rest[rest.length - 1] : null;
-    FM.SAMPLE_FARMS.forEach(([name, owner, sido, sigungu, category, items, when], i) => {
-      const f = FM.newFarm({ no: i + 1, name, owner, sido, sigungu, category, items, phone: '010-0000-' + String(i + 1).padStart(4, '0'), place: App.venue(ev.venueId).short, isNew: i % 3 === 0 ? 'ㅇ' : '×', memo: '연습용 예시' });
+    FM.SAMPLE_FARMS.forEach(([name, owner, sido, sigungu, category, items, when, power], i) => {
+      const f = FM.newFarm({ no: i + 1, name, owner, sido, sigungu, category, items, power: power || '', phone: '010-0000-' + String(i + 1).padStart(4, '0'), place: App.venue(ev.venueId).short, isNew: i % 3 === 0 ? 'ㅇ' : '×', memo: '연습용 예시' });
       for (const d of ev.days) f.days[d.id] = true;
       if (when === 'sat' && last) delete f.days[last.id];
       if (when === 'sun' && first && last) delete f.days[first.id];
@@ -901,6 +930,20 @@
             '자동으로 다시 뽑기'
           )
         )
+      ),
+      h(
+        'label',
+        { class: 'field' },
+        h('span', null, '⚡ 전력 사용량 (kW)'),
+        h('input', {
+          class: 'input',
+          type: 'number',
+          min: 0,
+          step: 0.1,
+          value: FM.Power.kw(d) || '',
+          placeholder: '모르면 비워 두세요',
+          oninput: (e) => (d.power = FM.Power.parse(e.target.value)),
+        })
       ),
       field('신규여부', 'isNew', { placeholder: 'ㅇ / ×' }),
       field('장소', 'place'),
@@ -1044,7 +1087,7 @@
       if (fromExcel) list = FM.Excel.rowsToFarms(opt.wbData.sheets[S.sheet].rows, S.headerRow, S.map, S.dayCols);
       else
         list = opt.fromEvent.farms.map((f, i) => ({
-          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
+          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, power: f.power, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
           dayVals: {},
           rowNo: i + 1,
         }));
@@ -1270,7 +1313,7 @@
                   else cands.forEach((_, i) => S.excluded.add(i));
                   draw();
                 },
-              })), h('th', null, '행'), h('th', null, '농가명'), h('th', null, '대표자'), h('th', null, '품목군'), h('th', null, '신청품목'), h('th', null, '장소'), h('th', null, '상태'))),
+              })), h('th', null, '행'), h('th', null, '농가명'), h('th', null, '대표자'), h('th', null, '품목군'), h('th', null, '신청품목'), h('th', null, '장소'), h('th', null, '⚡kW'), h('th', null, '상태'))),
               h(
                 'tbody',
                 null,
@@ -1296,6 +1339,7 @@
                     h('td', null, c.data.category),
                     h('td', { class: 'td-items' }, c.data.items),
                     h('td', null, c.data.place),
+                    h('td', { class: 'nowrap' }, FM.Power.kw(c.data) ? FM.Power.fmt(FM.Power.kw(c.data)) : ''),
                     h('td', null, hidden ? h('span', { class: 'badge b-past' }, '다른 장소') : c.existing ? h('span', { class: 'badge b-future' }, '이미 있음') : h('span', { class: 'badge b-today' }, '새 농가'))
                   );
                 })
@@ -1525,7 +1569,7 @@
         h('h4', null, '0. 파일 열기'),
         h('p', null, '받은 「농부의시장_배치도.html」 파일을 더블클릭하면 크롬/엣지에서 열려요. 인터넷이 없어도 동작해요. 작업은 자동 저장돼요.'),
         h('h4', null, '① 참여 명단'),
-        h('ul', null, h('li', null, '일정을 누르고 「📥 엑셀 명단 넣기」로 명단 엑셀을 넣어요. 「장소」 열이 있으면 해당 장소 농가만 골라 줘요.'), h('li', null, '날짜(토/일)별 체크로 참여 여부를 정해요. 취소된 농가는 체크를 풀고, 추가 농가는 「엑셀로 추가 명단 넣기」나 「농가 직접 추가」로 넣어요.')),
+        h('ul', null, h('li', null, '일정을 누르고 「📥 엑셀 명단 넣기」로 명단 엑셀을 넣어요. 「장소」 열이 있으면 해당 장소 농가만 골라 줘요.'), h('li', null, '날짜(토/일)별 체크로 참여 여부를 정해요. 취소된 농가는 체크를 풀고, 추가 농가는 「엑셀로 추가 명단 넣기」나 「농가 직접 추가」로 넣어요.'), h('li', null, '⚡ 전력 사용량: 명단 엑셀의 「장소」 바로 뒤 열에 kW 숫자를 적으면 자동으로 읽어요(전력이 큰 농가만 적어도 돼요). 명단 표의 ⚡ 칸이나 농가 수정 창에서 바로 넣고 고칠 수 있어요.')),
         h('h4', null, '② 칸 만들기'),
         h(
           'ul',
@@ -1533,6 +1577,7 @@
           h('li', null, '격자를 클릭·드래그해서 부스 칸을 만들어요. 한 칸 = 농가 한 곳. 격자 끝까지 칠하면 자동으로 넓어져요.'),
           h('li', null, '위쪽 숫자가 「남은 칸 수」예요. 0이 되면 참여 농가 수와 딱 맞아요.'),
           h('li', null, '부스 앞면(손님 쪽) 방향 ▲▼◀▶ 은 자동으로 정해져요. 틀린 줄은 「➜ 방향」 붓으로 방향을 고르고 그 줄의 부스 하나만 클릭하면 줄 전체가 바뀌어요. 통로 건너 마주 보는 부스는 바로 옆처럼 떨어뜨려요.'),
+          h('li', null, '⚡ 전력 구역: 「⚡ 전력 구역」에서 구역 수를 정하고 「자동으로 나누기」를 누르면 간선·분전반 구역(A·B·C…)이 나뉘어요. 구역 용량·발전기 용량을 알면 적어 두세요. 「⚡ 구역」 붓으로 고칠 수 있어요.'),
           h('li', null, '장소마다 모양이 다르니 한 번 만든 모양은 「장소 기본형으로 저장」해 두면 다음 일정에서 불러올 수 있어요.')
         ),
         h('h4', null, '③ 농가 배치'),
@@ -1543,7 +1588,8 @@
           null,
           h('li', null, '원재료가 같으면(사과↔사과즙, 참깨↔참기름, 포도↔와인) 결과물이 달라도 비슷한 품목으로 봐요. 즙·청·떡·젓갈처럼 같은 형태, 같은 품목군도 함께 봐요.'),
           h('li', null, '가까이 붙거나 통로 건너 마주 보는 곳을 선으로 이어 보여줘요. 선 색이 다르면 다른 원재료·형태예요.'),
-          h('li', null, '위험(빨강) = 같은 원재료가 바로 옆·대각선·마주봄, 주의(주황) = 2칸 거리 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.')
+          h('li', null, '위험(빨강) = 같은 원재료가 바로 옆·대각선·마주봄, 주의(주황) = 2칸 거리 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.'),
+          h('li', null, '⚡ 전력 분산: 구역별 kW 합계와 목표·용량을 막대로 보여주고, 전력 큰 농가끼리 붙은 곳을 알려줘요. 자동 배치는 전력까지 함께 맞춰요.')
         ),
         h('h4', null, '⑤ 저장·출력·공유'),
         h('ul', null, h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요. 배치가 끝나면 배치 화면 위의 「🖼 그림 저장」으로 바로 저장해도 돼요.'), h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')),
@@ -1682,6 +1728,13 @@
           '줄 배치에서 위아래 칸이 서로 등을 맞대고 있다면 2배를 고르세요.'
         )
       ),
+      h('h4', null, '⚡ 전력 분산'),
+      h(
+        'p',
+        { class: 'muted small' },
+        '전력 사용량(kW)이 입력된 농가는 ① 큰 농가끼리 붙지 않게(같은 분기 회로), ② 전력 구역(간선·분전반)마다 합계가 고르게, ③ 구역 용량을 넘지 않게 배치해요. 구역은 ② 칸 만들기의 「⚡ 전력 구역」에서 나눠요.'
+      ),
+      h('div', { class: 'grid2' }, slider('고전력 농가끼리 떨어뜨리기', 'wPow', 0, 1.5, 0.1, (v) => v.toFixed(1)), slider('구역별 합계 고르게', 'wZone', 0, 10, 0.5, (v) => v.toFixed(1))),
       h('h4', null, '원재료 사전'),
       h(
         'p',

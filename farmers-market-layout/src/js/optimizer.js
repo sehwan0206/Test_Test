@@ -87,6 +87,9 @@
    *   toPlace: number[]         새로 배치할 농가 인덱스 (우선순위 순)
    *   fresh:   boolean          true = 고정되지 않은 칸을 비우고 처음부터 재배치
    *   anchorPenalty: number     자리 이동 1건당 벌점 (0 = 자유 재배치)
+   *   power:   Float64Array(N1) 농가별 전력 kW (마지막 = 빈 자리 0)        ─┐ 전력 구역 균형 (선택)
+   *   zone:    {zoneOf: Int32Array(K), caps: Float64Array(Z)}              │ 구역 합계를 목표에 맞추고
+   *   wZone:   구역 불균형 가중치 (기본 4)                                 ─┘ 용량 초과는 크게 벌점
    *   st                        설정 (radius, vScale — 근접도 계산용)
    *   seed, restarts, iterations
    * @returns {{assign: Int32Array, cost: number, unplaced: number[], moved: number}}
@@ -123,12 +126,74 @@
     const unplaced = pool.length > empties ? pool.slice(empties) : [];
     pool = pool.slice(0, empties);
 
-    // 농가별 '배치 난이도' = 다른 모든 농가와의 유사도 합
+    // ---- 전력 구역 균형 준비
+    const PW = p.power || null;
+    const Z = PW && p.zone && p.zone.caps.length ? p.zone : null;
+    let ZL = null;
+    let ZT = null;
+    const wZ = p.wZone == null ? 4 : p.wZone;
+    if (Z) {
+      const nZ = Z.caps.length;
+      ZL = new Float64Array(nZ);
+      ZT = new Float64Array(nZ);
+      let total = 0;
+      for (let i = 0; i < K; i++) if (base[i] !== E) total += PW[base[i]];
+      for (const f of pool) total += PW[f];
+      const booths = new Float64Array(nZ);
+      for (let i = 0; i < K; i++) if (Z.zoneOf[i] >= 0) booths[Z.zoneOf[i]]++;
+      const allZoned = booths.reduce((a, b) => a + b, 0) === K;
+      const capSum = Z.caps.reduce((a, b) => a + b, 0);
+      const allCaps = allZoned && Z.caps.every((c) => c > 0);
+      for (let z = 0; z < nZ; z++) ZT[z] = allCaps ? (total * Z.caps[z]) / capSum : (total * booths[z]) / K;
+      if (total <= 0) ZL = null;
+    }
+    /** 구역 z 의 합계가 L 일 때 비용 */
+    function ZC(z, L) {
+      let c = 0;
+      const T = ZT[z];
+      if (T > 0) c += wZ * ((L - T) / T) * ((L - T) / T);
+      const cap = Z.caps[z];
+      if (cap > 0 && L > cap) {
+        const o = (L - cap) / cap;
+        c += 30 * o + 30 * o * o;
+      }
+      return c;
+    }
+    function setLoads(A) {
+      if (!ZL) return;
+      ZL.fill(0);
+      for (let i = 0; i < K; i++) if (Z.zoneOf[i] >= 0) ZL[Z.zoneOf[i]] += PW[A[i]];
+    }
+    function zoneDelta(A, i, j) {
+      const zi = Z.zoneOf[i];
+      const zj = Z.zoneOf[j];
+      if (zi === zj) return 0;
+      const pi = PW[A[i]];
+      const pj = PW[A[j]];
+      if (pi === pj) return 0;
+      let d = 0;
+      if (zi >= 0) d += ZC(zi, ZL[zi] - pi + pj) - ZC(zi, ZL[zi]);
+      if (zj >= 0) d += ZC(zj, ZL[zj] - pj + pi) - ZC(zj, ZL[zj]);
+      return d;
+    }
+    function swapLoads(A, i, j) {
+      if (!ZL) return;
+      const zi = Z.zoneOf[i];
+      const zj = Z.zoneOf[j];
+      if (zi === zj) return;
+      const pi = PW[A[i]];
+      const pj = PW[A[j]];
+      if (zi >= 0) ZL[zi] += pj - pi;
+      if (zj >= 0) ZL[zj] += pi - pj;
+    }
+
+    // 농가별 '배치 난이도' = 다른 모든 농가와의 유사도 합 (+ 전력이 클수록 먼저)
     const weight = new Float64Array(N1);
+    const maxPW = PW ? Math.max(0, ...Array.from(PW)) : 0;
     for (let a = 0; a < E; a++) {
       let s = 0;
       for (let b = 0; b < E; b++) s += S[a * N1 + b];
-      weight[a] = s;
+      weight[a] = s + (maxPW > 0 ? (3 * PW[a]) / maxPW : 0);
     }
 
     const { off, idx, w } = nb;
@@ -159,6 +224,7 @@
         const after = (fj !== E && fj !== oi ? 1 : 0) + (fi !== E && fi !== oj ? 1 : 0);
         d += lam * (after - before);
       }
+      if (ZL) d += zoneDelta(A, i, j);
       return d;
     }
 
@@ -172,25 +238,33 @@
     function greedy(A, jitter) {
       const key = new Map(pool.map((f) => [f, weight[f] * (1 + jitter * (rng() - 0.5))]));
       const order = pool.slice().sort((a, b) => key.get(b) - key.get(a));
+      setLoads(A);
       for (const f of order) {
         let best = Infinity;
         let cands = [];
         for (const i of movable) {
           if (A[i] !== E) continue;
-          const c = localCost(A, i, f);
+          let c = localCost(A, i, f);
+          if (ZL && Z.zoneOf[i] >= 0 && PW[f]) {
+            const z = Z.zoneOf[i];
+            c += ZC(z, ZL[z] + PW[f]) - ZC(z, ZL[z]);
+          }
           if (c < best - 1e-9) {
             best = c;
             cands = [i];
           } else if (c < best + 1e-9) cands.push(i);
         }
         if (!cands.length) break;
-        A[cands[Math.floor(rng() * cands.length)]] = f;
+        const at = cands[Math.floor(rng() * cands.length)];
+        A[at] = f;
+        if (ZL && Z.zoneOf[at] >= 0) ZL[Z.zoneOf[at]] += PW[f];
       }
     }
 
     function anneal(A, iters) {
       const M = movable.length;
       if (M < 2) return;
+      setLoads(A);
       // 초기 온도: 비용이 늘어나는 교환의 평균 증가량
       let sum = 0;
       let cnt = 0;
@@ -221,6 +295,7 @@
         if (fi === fj) continue;
         const d = delta(A, i, j);
         if (d <= 0 || rng() < Math.exp(-d / T)) {
+          swapLoads(A, i, j);
           A[i] = fj;
           A[j] = fi;
           cur += d;
@@ -231,9 +306,11 @@
         }
       }
       A.set(bestA);
+      setLoads(A);
     }
 
     function polish(A) {
+      setLoads(A);
       for (let pass = 0; pass < 30; pass++) {
         let improved = false;
         for (let x = 0; x < movable.length; x++) {
@@ -242,6 +319,7 @@
             const j = movable[y];
             if (A[i] === A[j]) continue;
             if (delta(A, i, j) < -1e-9) {
+              swapLoads(A, i, j);
               const t = A[i];
               A[i] = A[j];
               A[j] = t;
@@ -256,6 +334,10 @@
     function fullCost(A) {
       let c = Opt.totalCost(A, nb, S, N1, true);
       if (anchor) for (let i = 0; i < K; i++) if (A[i] !== E && A[i] !== anchor[i]) c += lam;
+      if (ZL) {
+        setLoads(A);
+        for (let z = 0; z < ZL.length; z++) c += ZC(z, ZL[z]);
+      }
       return c;
     }
 

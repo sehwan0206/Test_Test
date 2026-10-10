@@ -45,6 +45,8 @@
     autoPin: true, // 수동 배치·교체 시 자동 고정
     zoom: 1, // ③ 배치·④ 검수 화면 배율
     zoomEdit: 0.6, // ② 칸 만들기 화면 배율 (작게 보여서 넓은 격자를 한눈에)
+    wPow: 0.5, // 고전력 농가끼리 떨어뜨리기
+    wZone: 4, // 전력 구역(간선) 합계 균형
     rawDict: FM.DEFAULT_RAW_DICT,
     formDict: FM.DEFAULT_FORM_DICT,
     dictVersion: FM.DICT_VERSION,
@@ -195,7 +197,7 @@
   //            tags[], tagsManual, days: {dayId: true} }
   // 격자 크기: 농가가 40곳을 넘는 경우가 많아 넉넉하게 시작 (20줄 × 30칸 = 600칸)
   FM.GRID = { rows: 20, cols: 30, max: 100, margin: 3 };
-  FM.emptyLayout = (rows, cols) => ({ rows: rows || FM.GRID.rows, cols: cols || FM.GRID.cols, cells: {}, assign: {}, pins: {}, numbering: 'row' });
+  FM.emptyLayout = (rows, cols) => ({ rows: rows || FM.GRID.rows, cols: cols || FM.GRID.cols, cells: {}, assign: {}, pins: {}, numbering: 'row', zoneCaps: {}, genCap: '' });
 
   FM.newDay = (date, round) => ({ id: FM.uid('d'), date, round: round || '', layout: FM.emptyLayout() });
 
@@ -214,6 +216,7 @@
         isNew: '',
         place: '',
         memo: '',
+        power: '', // 전력 사용량 kW ('' = 모름/적음)
         tags: [], // 원재료
         forms: [], // 제품 형태
         tagsManual: false,
@@ -273,6 +276,8 @@
         d.layout.cells = d.layout.cells || {};
         d.layout.assign = d.layout.assign || {};
         d.layout.pins = d.layout.pins || {};
+        d.layout.zoneCaps = d.layout.zoneCaps || {}; // 전력 구역별 용량 kW
+        if (d.layout.genCap === undefined) d.layout.genCap = ''; // 발전기(전체) 용량 kW
         // 아직 칸을 그리지 않은 예전의 작은 격자(8×14)는 넉넉한 기본 크기로 늘림
         if (!Object.keys(d.layout.cells).length) {
           d.layout.rows = Math.max(d.layout.rows, FM.GRID.rows);
@@ -280,6 +285,7 @@
         }
       }
       ev.farms = ev.farms.map((f) => FM.newFarm(f));
+      for (const f of ev.farms) if (f.power !== '' && typeof f.power !== 'number') f.power = FM.Power ? FM.Power.parse(f.power) : '';
       if (resetTags) for (const f of ev.farms) f.tagsManual = false;
       ev.days.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     }

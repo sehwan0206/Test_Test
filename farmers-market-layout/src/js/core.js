@@ -30,75 +30,28 @@
     { venue: 'yangcheon', title: '17,18회차', days: [['2026-11-14', '17회차'], ['2026-11-15', '18회차']] },
   ];
 
-  // ---------------------------------------------------------------------------
-  // 품목 키워드 사전 (설정에서 수정 가능)
-  //   그룹명: 키워드, 키워드, ...
-  //   키워드 문법:  꿀 = 포함 / =배 = 정확히 일치 / ^묵 = ~로 시작 / 청$ = ~로 끝남 / !김치 = 제외
-  //   괄호 안 내용(예: 사과(홍로, 부사))은 품종·구성 설명으로 보고 무시합니다.
-  // ---------------------------------------------------------------------------
-  FM.DEFAULT_KEYWORDS = [
-    '꿀·양봉: 꿀, 로얄젤리, 로열젤리, 꽃가루, =화분, 밀랍, 프로폴리스, 허니, !꿀떡, !꿀빵',
-    '사과: 사과, 홍로, 감홍, 부사, 시나노, 아리수',
-    '배: =배, 신고배, 배즙, 배도라지',
-    '포도: 포도, 샤인머스켓, 샤인머스캣, 머스켓, 머스캣, 거봉, 캠벨, 머루, !포도씨, !식초',
-    '딸기: 딸기',
-    '베리류: 블루베리, 아로니아, 오디, 복분자, 크랜베리, !식초',
-    '복숭아·자두·살구: 복숭아, 자두, 살구, 천도, 매실, !장아찌',
-    '감: 단감, 대봉, 홍시, 곶감, 말랭이, 반시, 연시, =감',
-    '감귤·유자: 귤, 한라봉, 천혜향, 레드향, 황금향, 유자, !요거트',
-    '참다래·키위: 참다래, 키위',
-    '대추: 대추',
-    '밤·견과: 알밤, 군밤, 깐밤, 칼집밤, 칼집밥, 반밤, =밤, 잣, 호두, 땅콩, 은행, 아몬드',
-    '버섯: 버섯, 표고, 느타리, 송이, 목이, 노루궁뎅이, 상황, 영지, 동충하초, 팽이',
-    '산나물·약초: 고사리, 더덕, 도라지, 명이, 산마늘, 눈개승마, 엄나무, 두릅, 취나물, 곰취, 나물, 황기, 칡, 헛개, 당귀, 오가피',
-    '인삼·홍삼: 인삼, 홍삼, 수삼, 흑삼, 산양삼, 새싹삼',
-    '채소: 토마토, 오이, 고추, 고춧가루, 양파, 감자, 고구마, 배추, =무, 상추, 대파, 쪽파, =파, 양배추, 호박, 가지, 생강, 마늘, 당근, 쌈채, 케일, 로메인, 허브, 바질, =딜, 시금치, 브로콜리, 파프리카, 차요태, 비트, 여주, 콜라비, 연근, 우엉, 부추, 미나리, !고추장, !차$, !장아찌, !김치',
-    '김치: 김치, 깍두기, 겉절이, 섞박지, 동치미, 소박이, 알타리, 열무, 묵은지',
-    '장류: 된장, 고추장, 간장, 막장, 청국장, 쌈장, 메주, 장소금, !어간장, !게장',
-    '장아찌·절임: 장아찌, 짱아찌, 절임, 피클',
-    '젓갈·액젓: 젓, 명란, 창난, 액젓, 어간장, 까나리',
-    '게장·해산물: 게장, 전복, 꽃게, 새우장, 대게, 낙지, 오징어, 문어, 새우, =굴, 굴비, !젓, !어간장',
-    '조개·재첩: 재첩, 바지락, 홍합, 조개, 꼬막, 가리비',
-    '김·해조류: 김, 미역, 다시마, 톳, 감태, 매생이, 파래, 꼬시래기, !김치, !김장, !튀김, !식초',
-    '건어물: 멸치, 황태, 북어, 쥐포, 건어물, 노가리, 건새우, 꼴뚜기, 실치, 디포리, !어간장, !액젓',
-    '떡: 떡, 인절미, 송편, 설기, 모찌, 경단, 절편, 시루, 증편, !떡갈비',
-    '한과·간식: 약과, 강정, 한과, 유과, 정과, 부각, 오란다, 누룽지, 쿠키, 젤리, 양갱, 칩, 과자, 주전부리, 그래놀라, !로얄젤리, !로열젤리',
-    '빵·베이커리: 빵, 베이글, 식빵, 치아바타, 샌드, 스콘, 케이크, 머핀, 휘낭시에, 마들렌, 파이, 카스테라, 와플, 꽈배기, !빵가루',
-    '음료: 식혜, 수정과, 음료, 주스, 쥬스, 라떼, 에이드, 스무디, 커피, 두유, 미숫가루',
-    '청·즙·진액: 청$, 즙, 진액, 원액, 발효액, 추출액, 엑기스, 농축액',
-    '차: 차$, 티백, 잎차',
-    '식초: 식초, 발사믹, 발효초',
-    '잼·소스: 잼, 쨈, 퓨레, 페스토, 스프레드, 소스, 드레싱, 시럽',
-    '주류: 와인, 증류주, 막걸리, 약주, 담금주, 소주, 맥주, 뱅쇼, 전통주, 탁주, 과실주, !식초',
-    '유제품: 치즈, 요거트, 요구르트, 우유, 버터',
-    '계란: 계란, 달걀, 란$, 유정란, 메추리알, !명란, !창란',
-    '육류·육가공: 한우, 한돈, 돼지고기, 소고기, =닭, 닭고기, 오리, 육포, 고기, 정육, 소시지, 햄, 떡갈비, 불고기, 곰탕, 사골',
-    '곡물·잡곡: =쌀, 백미, 현미, 찹쌀, 흑미, 잡곡, 서리태, 콩$, 팥, 귀리, 율무, 보리, 수수, 차조, 매조, 기장, 메밀, 옥수수, 오곡, 녹두, 들깨, 참깨, 통깨, !차$, !식초, !발효, !떡, !모찌',
-    '참기름·들기름: 기름, 오일',
-    '묵: ^묵, 도토리, 건조묵, !묵은',
-    '즉석·간편식: 밀키트, 도시락, 간편식, 국$, 수프, 스프, !떡국, !청국',
-    '건강식품: 천년초, 꾸지뽕, 와송, 콜라겐, 유산균, 흑마늘, 노니, 녹용, 효소, 환$',
-    '화훼·모종: 생화, 모종, 다육, 화초, 묘목, 꽃$, !꿀',
-  ].join('\n');
-
+  // 품목 사전(원재료·제품 형태)은 dictionary.js
   FM.DEFAULT_SETTINGS = {
-    wCat: 0.35, // 같은 품목군일 때 유사도
-    wTag: 0.65, // 공통 품목 키워드가 있을 때 유사도
-    radius: 2.3, // 자동 배치·점수 계산에 고려하는 거리(칸)
-    vScale: 1, // 세로(위·아래) 방향 거리 배율 (2 → 위아래 칸을 2칸 거리로 취급)
+    wRaw: 0.7, // 같은 원재료(결과물이 달라도)일 때 유사도
+    wForm: 0.35, // 같은 제품 형태(즙·청·떡·젓갈…)일 때 유사도
+    wCat: 0.2, // 같은 품목군일 때 유사도
+    radius: 6, // 자동 배치·검수에서 살피는 거리(칸) — 이 안에서 멀수록 좋게 계산
+    vScale: 1, // 세로(위·아래) 방향 거리 배율
     lineDist: 1.5, // 검수 선 거리 기준 (lineScope 가 tag/all 일 때)
-    lineScope: 'warn', // warn = 위험·주의만 / info = 참고까지 / tag = 공통 품목 모두 / all = 같은 품목군까지 모두
-    lineColorBy: 'group', // group = 품목별 색 / cluster = 묶음별 색
+    lineScope: 'warn', // warn = 위험·주의만 / info = 참고까지 / tag = 원재료·형태 공통 모두 / all = 같은 품목군까지 모두
+    lineColorBy: 'group', // group = 원재료·형태별 색 / cluster = 묶음별 색
     heatmap: true,
     liveLines: false, // 배치 화면에서도 검수 선 표시
     autoPin: true, // 수동 배치·교체 시 자동 고정
     zoom: 1, // ③ 배치·④ 검수 화면 배율
     zoomEdit: 0.6, // ② 칸 만들기 화면 배율 (작게 보여서 넓은 격자를 한눈에)
-    keywords: FM.DEFAULT_KEYWORDS,
+    rawDict: FM.DEFAULT_RAW_DICT,
+    formDict: FM.DEFAULT_FORM_DICT,
+    dictVersion: FM.DICT_VERSION,
   };
 
   // 검수 레벨 기준 (근접 위험도 = 유사도 × 거리 가중치)
-  FM.LEVELS = { danger: 0.6, warn: 0.3, info: 0.15 };
+  FM.LEVELS = { danger: 0.45, warn: 0.3, info: 0.15 }; // 같은 원재료가 대각선(0.7×0.71)이면 위험
   FM.LEVEL_LABEL = { danger: '위험', warn: '주의', info: '참고' };
 
   // ---------------------------------------------------------------------------
@@ -261,7 +214,8 @@
         isNew: '',
         place: '',
         memo: '',
-        tags: [],
+        tags: [], // 원재료
+        forms: [], // 제품 형태
         tagsManual: false,
         days: {},
       },
@@ -291,7 +245,24 @@
     st.version = FM.DATA_VERSION;
     st.venues = Array.isArray(st.venues) && st.venues.length ? st.venues : FM.createDefaultState().venues;
     st.events = Array.isArray(st.events) ? st.events : [];
+    const storedDictVersion = (st.settings || {}).dictVersion;
     st.settings = Object.assign(FM.clone(FM.DEFAULT_SETTINGS), st.settings || {});
+    let resetTags = false;
+    if (storedDictVersion !== FM.DICT_VERSION) {
+      // 이전 버전(품목군 + 단순 품목 그룹) → 원재료·형태 기준으로 전환
+      const keep = { vScale: st.settings.vScale };
+      Object.assign(st.settings, FM.clone(FM.DEFAULT_SETTINGS), keep, {
+        lineColorBy: st.settings.lineColorBy,
+        heatmap: st.settings.heatmap,
+        liveLines: st.settings.liveLines,
+        autoPin: st.settings.autoPin,
+        zoom: st.settings.zoom,
+        zoomEdit: st.settings.zoomEdit,
+      });
+      delete st.settings.keywords;
+      delete st.settings.wTag;
+      resetTags = true;
+    }
     st.meta = Object.assign({ exportId: null, loadedExportId: null, exportedAt: null, updatedAt: null }, st.meta || {});
     for (const v of st.venues) if (v.template === undefined) v.template = null;
     for (const ev of st.events) {
@@ -309,6 +280,7 @@
         }
       }
       ev.farms = ev.farms.map((f) => FM.newFarm(f));
+      if (resetTags) for (const f of ev.farms) f.tagsManual = false;
       ev.days.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     }
     return st;
@@ -440,6 +412,111 @@
   };
 
   // ---------------------------------------------------------------------------
+  // 부스 방향 (손님을 맞는 앞면이 향하는 쪽): u 위 · d 아래 · l 왼쪽 · r 오른쪽
+  //   cell.dir = 방향, cell.da = 1 이면 자동으로 정한 방향 (칸을 더 그리면 다시 계산)
+  // ---------------------------------------------------------------------------
+  FM.DIRS = ['u', 'd', 'l', 'r'];
+  FM.DIR_LABEL = { u: '위', d: '아래', l: '왼쪽', r: '오른쪽' };
+  FM.DIR_ARROW = { u: '▲', d: '▼', l: '◀', r: '▶' };
+  const DV = { u: [-1, 0], d: [1, 0], l: [0, -1], r: [0, 1] };
+
+  /**
+   * 부스 방향 자동 설정
+   *   한 줄로 이어진 부스는 줄과 수직 방향만 후보로 두고, 앞이 비어 있는 쪽을 고름.
+   *   통로 건너 다른 부스 줄이 있으면 그쪽(통로 쪽)을 우선, 막힌 쪽(부스·시설·격자 끝)은 피함.
+   * @param mode 'auto'(기본) = 직접 정한 방향은 두고 자동 방향만 다시 계산 / 'all' = 전부 다시
+   * @returns 바뀐 칸 수
+   */
+  FM.autoDirections = function (L, mode) {
+    const at = (r, c) => L.cells[FM.cellKey(r, c)];
+    const isB = (r, c) => {
+      const x = at(r, c);
+      return !!x && x.t === 'b';
+    };
+    const inGrid = (r, c) => r >= 0 && c >= 0 && r < L.rows && c < L.cols;
+    let changed = 0;
+    for (const [k, cell] of Object.entries(L.cells)) {
+      if (cell.t !== 'b') continue;
+      if (mode !== 'all' && cell.dir && !cell.da) continue;
+      const [r, c] = FM.parseKey(k);
+      const runH = isB(r, c - 1) || isB(r, c + 1);
+      const runV = isB(r - 1, c) || isB(r + 1, c);
+      const allowed = runH && !runV ? ['d', 'u'] : runV && !runH ? ['r', 'l'] : ['d', 'u', 'r', 'l'];
+      let best = null;
+      let bestScore = -Infinity;
+      for (const dir of allowed) {
+        const [fr, fc] = DV[dir];
+        const nr = r + fr;
+        const nc = c + fc;
+        let score;
+        if (!inGrid(nr, nc)) score = -3;
+        else if (isB(nr, nc)) score = -100;
+        else if (at(nr, nc)) score = -5; // 시설 칸
+        else {
+          score = 2;
+          for (let s2 = 2; s2 <= 6; s2++) {
+            const rr = r + fr * s2;
+            const cc = c + fc * s2;
+            if (!inGrid(rr, cc)) {
+              score = 1;
+              break;
+            }
+            if (isB(rr, cc)) {
+              score = 10 - s2; // 통로 건너 마주 보는 줄
+              break;
+            }
+            if (at(rr, cc)) break;
+          }
+        }
+        if (cell.dir === dir) score += 0.01;
+        if (score > bestScore) {
+          bestScore = score;
+          best = dir;
+        }
+      }
+      if (bestScore <= -100) {
+        // 사방이 부스로 막힌 칸 — 방향 없음(거리로만 판단)
+        if (cell.dir && cell.da) {
+          delete cell.dir;
+          delete cell.da;
+          changed++;
+        }
+        continue;
+      }
+      if (cell.dir !== best) changed++;
+      cell.dir = best;
+      cell.da = 1;
+    }
+    return changed;
+  };
+
+  /** 방향 일괄 지정: key 칸(그리고 whole 이면 같은 줄로 이어진 부스 전체)에 dir 지정. 지정한 칸 목록 반환 */
+  FM.setDirection = function (L, key, dir, whole) {
+    const cell = L.cells[key];
+    if (!cell || cell.t !== 'b') return [];
+    const keys = [key];
+    if (whole) {
+      // 위·아래를 정하면 가로줄 전체, 왼쪽·오른쪽을 정하면 세로줄 전체
+      const [r, c] = FM.parseKey(key);
+      const step = dir === 'u' || dir === 'd' ? [0, 1] : [1, 0];
+      for (const sgn of [-1, 1]) {
+        for (let i = 1; ; i++) {
+          const k2 = FM.cellKey(r + step[0] * i * sgn, c + step[1] * i * sgn);
+          const x = L.cells[k2];
+          if (!x || x.t !== 'b') break;
+          keys.push(k2);
+        }
+      }
+    }
+    for (const k2 of keys) {
+      if (dir) L.cells[k2].dir = dir;
+      else delete L.cells[k2].dir;
+      delete L.cells[k2].da;
+    }
+    return keys;
+  };
+
+  // ---------------------------------------------------------------------------
   // 칸 모양 프리셋: n개 부스를 가진 기본 형태를 생성
   // ---------------------------------------------------------------------------
   FM.generateShape = function (shape, n, lines) {
@@ -447,12 +524,16 @@
     const path = [];
     let rows, cols;
     if (shape === 'lines') {
-      // 마주보기 줄 배치: 줄 사이에 통로 1칸
+      // 마주보는 줄 배치: ↓줄 · 통로 · ↑줄 ↓줄(등 맞댐) · 통로 · ↑줄 …
       const L = Math.max(1, Math.min(8, lines || 2));
       const len = Math.ceil(n / L);
-      rows = L * 2 + 1;
+      let r = 1;
+      for (let i = 0; i < L; i++) {
+        if (i > 0) r += i % 2 === 1 ? 2 : 1;
+        for (let c = 0; c < len; c++) path.push([r, 1 + c, i % 2 === 0 ? 'd' : 'u']);
+      }
+      rows = r + 2;
       cols = len + 2;
-      for (let i = 0; i < L; i++) for (let c = 0; c < len; c++) path.push([1 + i * 2, 1 + c]);
     } else if (shape === 'u') {
       // ㄷ자: 위쪽 줄 → 왼쪽 세로 → 아래쪽 줄 (오른쪽이 열린 형태)
       const hgt = Math.max(3, Math.round(n / 4) + 1);
@@ -483,10 +564,12 @@
     // 위·왼쪽에 여유 2칸(입구·무대 표시용), 전체 격자는 기본 크기 이상으로 넉넉하게
     const OFF = 1;
     const cells = {};
-    path.slice(0, n).forEach(([r, c]) => (cells[FM.cellKey(r + OFF, c + OFF)] = { t: 'b' }));
+    path.slice(0, n).forEach(([r, c, dir]) => (cells[FM.cellKey(r + OFF, c + OFF)] = dir ? { t: 'b', dir, da: 1 } : { t: 'b' }));
     rows = Math.min(FM.GRID.max, Math.max(FM.GRID.rows, rows + OFF + FM.GRID.margin));
     cols = Math.min(FM.GRID.max, Math.max(FM.GRID.cols, cols + OFF + FM.GRID.margin));
-    return { rows, cols, cells };
+    const out = { rows, cols, cells };
+    if (shape !== 'lines') FM.autoDirections(out, 'all');
+    return out;
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = FM;

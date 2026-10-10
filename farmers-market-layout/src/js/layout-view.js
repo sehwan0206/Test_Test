@@ -42,9 +42,9 @@
     const mode = ui().mode;
 
     const MODE_INFO = {
-      edit: ['② 칸 만들기', '격자를 클릭하거나 드래그해서 부스 칸을 만드세요. 한 칸 = 농가 한 곳.'],
+      edit: ['② 칸 만들기', '격자를 클릭·드래그해서 부스 칸을 만드세요(한 칸 = 농가 한 곳). 부스 앞면 방향(▲▼◀▶)은 자동으로 정해지고 「➜ 방향」 붓으로 줄 단위로 바꿀 수 있어요.'],
       assign: ['③ 농가 배치', '「⚡ 자동 배치」 후, 칸을 끌어 옮기거나 목록에서 농가를 골라 원하는 칸에 놓으세요.'],
-      inspect: ['④ 검수', '비슷한 품목이 가까이 붙은 곳을 선으로 이어 보여줘요. 손으로 바꾼 뒤 꼭 확인하세요.'],
+      inspect: ['④ 검수', '원재료·형태가 겹치는 농가가 가깝거나 서로 마주 보는 곳을 선으로 이어 보여줘요. 손으로 바꾼 뒤 꼭 확인하세요.'],
     }[mode];
 
     const top = h(
@@ -67,6 +67,7 @@
       h(
         'div',
         { class: 'lv-tools' },
+        h('button', { class: 'btn small', title: '지금 날짜의 배치도를 그림(PNG) 파일로 저장해요', onclick: () => savePng() }, '🖼 그림 저장'),
         h('button', { class: 'btn small', title: '되돌리기 (Ctrl+Z)', onclick: undo }, '↶ 되돌리기'),
         h('button', { class: 'btn small', title: '다시 하기 (Ctrl+Y)', onclick: redo }, '↷'),
         h(
@@ -94,6 +95,15 @@
     });
     refresh();
   };
+
+  function baseName() {
+    return UI.safeFileName(`농부의시장_${App().venue(C.ev.venueId).short}_${C.ev.title}`);
+  }
+  function savePng(withLines) {
+    const lines = withLines == null ? ui().mode === 'inspect' || (ui().mode === 'assign' && ST().liveLines) : withLines;
+    App().exportPng(C.ev, C.day, baseName(), lines);
+    UI.toast('배치도 그림을 저장했어요' + (lines ? ' (검수 선 포함)' : '') + '. 다운로드 폴더를 확인하세요.', 'ok');
+  }
 
   function setZoom(d) {
     ST()[zoomKey()] = Math.max(0.35, Math.min(1.6, Math.round((zoom() + d) * 100) / 100));
@@ -158,6 +168,23 @@
       el.appendChild(h('div', { class: 'counter-msg ' + (rem > 0 ? 'need' : rem === 0 ? 'ok' : 'over') }, rem > 0 ? `부스 칸을 ${rem}개 더 만들면 딱 맞아요` : rem === 0 ? '✓ 참여 농가 수와 부스 칸 수가 딱 맞아요!' : `칸이 ${-rem}개 남아요 (빈 자리가 생겨요)`));
       const pct = N ? Math.min(100, Math.round((K / N) * 100)) : 0;
       el.appendChild(h('div', { class: 'progress' }, h('div', { class: 'bar ' + (rem < 0 ? 'over' : rem === 0 ? 'ok' : ''), style: { width: pct + '%' } })));
+      const noDir = Object.values(LY().cells).filter((c) => c.t === 'b' && !c.dir).length;
+      if (K && noDir)
+        el.appendChild(
+          h(
+            'button',
+            {
+              class: 'stat over',
+              title: '사방이 막혀 앞면을 정할 수 없는 부스예요. 「➜ 방향」 붓으로 정해 주세요. (방향이 없으면 거리로만 판단해요)',
+              onclick: () => {
+                ui().brush = 'd';
+                renderSide();
+              },
+            },
+            h('small', null, '방향 없는 부스'),
+            h('b', null, noDir + '칸')
+          )
+        );
     } else {
       el.appendChild(stat('배치됨', P + '곳', P === N && N ? 'ok' : ''));
       const un = N - P;
@@ -179,6 +206,18 @@
       );
       if (K < N) el.appendChild(h('div', { class: 'counter-msg need' }, `⚠ 부스 칸이 ${N - K}개 부족해요 → ② 칸 만들기에서 늘려 주세요`));
       else if (K > N) el.appendChild(h('div', { class: 'counter-msg over' }, `빈 자리 ${K - P}칸`));
+      if (N > 0 && P === N)
+        el.appendChild(
+          h(
+            'div',
+            { class: 'done-banner' },
+            h('b', null, '🎉 배치 완료!'),
+            h('button', { class: 'btn small primary', onclick: () => savePng(false) }, '🖼 그림 저장'),
+            h('button', { class: 'btn small', onclick: () => savePng(true) }, '🖼 검수 선 넣어 저장'),
+            h('button', { class: 'btn small', onclick: () => App().exportExcel(C.ev, baseName()) }, '📊 엑셀 저장'),
+            h('button', { class: 'btn small ghost', onclick: () => App().printDay(C.ev, C.day) }, '🖨 인쇄')
+          )
+        );
     }
     el.appendChild(h('div', { class: 'spacer' }));
     if (P > 0) {
@@ -289,7 +328,7 @@
     if (u.swapFrom === key) cls += ' swap-src';
     if (C.hl && (C.hl.a === key || C.hl.b === key)) cls += ' hl';
     if (q) {
-      const hit = f && [f.name, f.owner, f.items, f.category, (f.tags || []).join(' ')].join(' ').toLowerCase().includes(q);
+      const hit = f && [f.name, f.owner, f.items, f.category, (f.tags || []).join(' '), (f.forms || []).join(' ')].join(' ').toLowerCase().includes(q);
       cls += hit ? ' match' : ' dim';
     }
     if (f) {
@@ -302,10 +341,15 @@
       const lv = C.cellLevel[key];
       if (lv) cls += ' heat-' + lv;
     }
-    const title = f ? `${C.nums[key]}번 · ${f.name}\n${f.category} · ${f.items}\n태그: ${(f.tags || []).join(', ') || '없음'}${L.pins[f.id] ? '\n📌 고정됨' : ''}` : `${C.nums[key]}번 · 빈 자리`;
+    if (cell.dir) cls += ' f-' + cell.dir;
+    const dirText = cell.dir ? `\n앞면: ${FM.DIR_LABEL[cell.dir]}쪽${cell.da ? ' (자동)' : ''}` : '';
+    const title = f
+      ? `${C.nums[key]}번 · ${f.name}\n${f.category} · ${f.items}\n원재료: ${(f.tags || []).join(', ') || '없음'}\n형태: ${(f.forms || []).join(', ') || '없음'}${L.pins[f.id] ? '\n📌 고정됨' : ''}${dirText}`
+      : `${C.nums[key]}번 · 빈 자리${dirText}`;
     return h(
       'div',
       { class: cls, 'data-k': key, style, title },
+      cell.dir ? h('span', { class: 'cdir d-' + cell.dir + (cell.da ? '' : ' manual') }, FM.DIR_ARROW[cell.dir]) : null,
       h('span', { class: 'cno' }, C.nums[key]),
       f && L.pins[f.id] ? h('span', { class: 'cpin' }, '📌') : null,
       f ? h('div', { class: 'cname' }, FM.shortName(f.name)) : h('div', { class: 'cempty' }, '빈 자리'),
@@ -332,7 +376,8 @@
       const w = 2.5 + 4 * Math.min(1, p.sev / 0.8);
       g.appendChild(svgEl('line', { x1: cx(p.a), y1: cy(p.a), x2: cx(p.b), y2: cy(p.b), stroke: '#fff', 'stroke-width': w + 3, 'stroke-linecap': 'round', opacity: 0.8 }));
       const ln = svgEl('line', { x1: cx(p.a), y1: cy(p.a), x2: cx(p.b), y2: cy(p.b), stroke: p.color, 'stroke-width': w, 'stroke-linecap': 'round' });
-      if (p.kind === 'cat') ln.setAttribute('stroke-dasharray', '7 5');
+      if (p.kind === 'form') ln.setAttribute('stroke-dasharray', '9 5');
+      else if (p.kind === 'cat') ln.setAttribute('stroke-dasharray', '2 6');
       g.appendChild(ln);
       for (const q of [p.a, p.b]) g.appendChild(svgEl('circle', { cx: cx(q), cy: cy(q), r: 4.5, fill: p.color, stroke: '#fff', 'stroke-width': 1.5 }));
       svg.appendChild(g);
@@ -372,13 +417,29 @@
     let action;
     if (u.brush === 'b') action = cell && cell.t === 'b' ? 'erase' : 'booth';
     else if (u.brush === 'l') action = cell && cell.t === 'l' && cell.label === u.labelText ? 'erase' : 'label';
+    else if (u.brush === 'd') action = 'dir';
     else action = 'erase';
     pushHistory();
     const visited = new Set();
+    const redraw = (k) => {
+      const old = C.els.grid.querySelector(`.cell[data-k="${k}"]`);
+      const nu = cellEl(k, L.cells[k], '', false);
+      if (old) old.replaceWith(nu);
+    };
     const apply = (k) => {
       if (visited.has(k)) return;
       visited.add(k);
       const cur = L.cells[k];
+      if (action === 'dir') {
+        // 방향 붓: 부스 앞면 방향 지정 (같은 줄 전체 옵션)
+        const pick = u.dirPick === undefined ? 'd' : u.dirPick;
+        const keys = FM.setDirection(L, k, pick || null, u.dirWhole !== false);
+        keys.forEach((k2) => {
+          visited.add(k2);
+          redraw(k2);
+        });
+        return;
+      }
       if (action === 'booth') {
         if (cur && cur.t === 'b') return;
         L.cells[k] = { t: 'b' };
@@ -414,6 +475,8 @@
       grid.removeEventListener('pointercancel', up);
       // 가장자리까지 칠하면 격자를 자동으로 늘림
       if (FM.ensureMargin(L)) UI.toast(`격자를 넓혔어요 (${L.rows}줄 × ${L.cols}칸)`);
+      // 칸 모양이 바뀌면 자동 방향(직접 정한 방향 제외)을 다시 계산
+      if (action !== 'dir') FM.autoDirections(L);
       changed();
     };
     grid.addEventListener('pointermove', move);
@@ -649,10 +712,7 @@
     if (!farms.length) return UI.toast('이 날 참여 농가가 없어요. ① 참여 명단에서 체크해 주세요.', 'warn');
     if (kind === 'fix' && !C.insp.counts.danger && !C.insp.counts.warn) return UI.toast('고칠 위험·주의 자리가 없어요. 👍', 'ok');
     const idx = new Map(farms.map((f, i) => [f.id, i]));
-    const cells = keys.map((k) => {
-      const [r, c] = FM.parseKey(k);
-      return { r, c };
-    });
+    const cells = FM.Sim.boothCells(L, keys);
     const initial = new Int32Array(keys.length).fill(-1);
     const fixed = new Uint8Array(keys.length);
     keys.forEach((k, i) => {
@@ -680,9 +740,8 @@
           fixed,
           toPlace,
           fresh: kind === 'all',
-          anchorPenalty: kind === 'fix' ? 0.12 : 0,
-          radius: st.radius,
-          vScale: st.vScale,
+          anchorPenalty: kind === 'fix' ? 1 : 0,
+          st,
           seed: (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0,
         });
         pushHistory();
@@ -752,8 +811,10 @@
     side.appendChild(
       section(
         '칸 그리기',
-        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스 칸'), brushBtn('l', '🏷 시설 표시'), brushBtn('x', '⌫ 지우개')),
-        u.brush === 'l'
+        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스'), brushBtn('d', '➜ 방향'), brushBtn('l', '🏷 시설'), brushBtn('x', '⌫ 지우개')),
+        u.brush === 'd'
+          ? dirPicker()
+          : u.brush === 'l'
           ? h(
               'div',
               { class: 'label-pick' },
@@ -780,6 +841,8 @@
           : h('p', { class: 'muted small' }, u.brush === 'b' ? '빈 격자를 누르면 부스 칸이 생기고, 부스 칸을 다시 누르면 지워져요. 누른 채로 끌면 여러 칸을 한 번에 칠해요. 오른쪽·아래 끝까지 칠하면 격자가 자동으로 늘어나요.' : '누르거나 끌어서 칸을 지워요.')
       )
     );
+
+    side.appendChild(directionSection());
 
     const shapeSel = h(
       'select',
@@ -981,6 +1044,103 @@
       )
     );
     side.appendChild(nextBtn('다음: ③ 농가 배치 →', 'assign'));
+  }
+
+  /** 방향 붓: 방향 고르기 + 같은 줄 한 번에 */
+  function dirPicker() {
+    const u = ui();
+    const pick = u.dirPick === undefined ? 'd' : u.dirPick;
+    const btn = (d, label) =>
+      h(
+        'button',
+        {
+          class: 'dir-btn' + (pick === d ? ' on' : ''),
+          title: d ? `앞면(손님 쪽)을 ${FM.DIR_LABEL[d]}으로` : '방향 지우기',
+          onclick: () => {
+            u.dirPick = d;
+            renderSide();
+          },
+        },
+        label
+      );
+    return h(
+      'div',
+      { class: 'dir-pick' },
+      h(
+        'div',
+        { class: 'dir-pad' },
+        h('span'),
+        btn('u', '▲ 위'),
+        h('span'),
+        btn('l', '◀ 왼쪽'),
+        btn(null, '없음'),
+        btn('r', '오른쪽 ▶'),
+        h('span'),
+        btn('d', '▼ 아래'),
+        h('span')
+      ),
+      h(
+        'label',
+        { class: 'check small' },
+        h('input', {
+          type: 'checkbox',
+          checked: u.dirWhole !== false,
+          onchange: (e) => (u.dirWhole = e.target.checked),
+        }),
+        '같은 줄 전체를 한 번에 (부스 하나만 클릭해도 그 줄이 모두 바뀜)'
+      ),
+      h('p', { class: 'muted small' }, '부스 앞면 = 손님이 서는 쪽이에요. 방향을 고른 뒤 부스를 클릭하거나, 누른 채로 여러 줄을 지나가면 한꺼번에 바뀌어요. 통로를 사이에 두고 앞면끼리 마주 보면 「마주봄」으로 보고 비슷한 품목을 떨어뜨려요.')
+    );
+  }
+
+  /** 부스 방향 요약 + 자동 설정 */
+  function directionSection() {
+    const L = LY();
+    const booths = Object.values(L.cells).filter((c) => c.t === 'b');
+    const withDir = booths.filter((c) => c.dir).length;
+    const manual = booths.filter((c) => c.dir && !c.da).length;
+    const counts = {};
+    for (const c of booths) if (c.dir) counts[c.dir] = (counts[c.dir] || 0) + 1;
+    return section(
+      '부스 방향 (마주봄 판단용)',
+      h(
+        'p',
+        { class: 'small' },
+        booths.length ? `방향 있음 ${withDir}/${booths.length}칸` : '부스 칸이 없어요',
+        manual ? ` · 직접 정함 ${manual}칸` : '',
+        withDir ? ' · ' + FM.DIRS.filter((d) => counts[d]).map((d) => `${FM.DIR_ARROW[d]} ${counts[d]}`).join('  ') : ''
+      ),
+      h(
+        'div',
+        { class: 'row gap wrap' },
+        h(
+          'button',
+          {
+            class: 'btn small',
+            disabled: !booths.length,
+            onclick: () => {
+              pushHistory();
+              const n = FM.autoDirections(L, 'all');
+              changed();
+              UI.toast(`모든 부스 방향을 자동으로 정했어요 (${n}칸 바뀜). 통로 쪽을 앞면으로 봐요.`, 'ok');
+            },
+          },
+          '🧭 전부 자동으로 정하기'
+        ),
+        h(
+          'button',
+          {
+            class: 'btn small ghost',
+            onclick: () => {
+              ui().brush = 'd';
+              renderSide();
+            },
+          },
+          '➜ 방향 붓으로 고치기'
+        )
+      ),
+      h('p', { class: 'muted small' }, '칸을 그리면 앞이 트인 쪽(통로 건너 다른 줄이 있으면 그쪽)을 앞면으로 자동으로 정해요. 직접 정한 방향은 그대로 둬요.')
+    );
   }
 
   function shiftLayout(L, dr, dc) {
@@ -1195,7 +1355,10 @@
       h('div', { class: 'sel-name' }, f.name),
       h('div', { class: 'muted small' }, [f.owner, f.phone].filter(Boolean).join(' · ')),
       h('div', { class: 'sel-items' }, f.category ? h('span', { class: 'cat-chip', style: { background: col.bg, borderColor: col.bd } }, f.category) : null, ' ', f.items),
-      (f.tags || []).length ? h('div', null, f.tags.map((t) => h('span', { class: 'tag' }, t))) : null,
+      (f.tags || []).length || (f.forms || []).length
+        ? h('div', null, (f.tags || []).map((t) => h('span', { class: 'tag raw', title: '원재료' }, t)), (f.forms || []).map((t) => h('span', { class: 'tag form', title: '제품 형태' }, t)))
+        : null,
+      L.cells[k].dir ? h('div', { class: 'muted small' }, `부스 앞면: ${FM.DIR_ARROW[L.cells[k].dir]} ${FM.DIR_LABEL[L.cells[k].dir]}쪽`) : null,
       h(
         'div',
         { class: 'row gap wrap' },
@@ -1271,7 +1434,7 @@
         if (u.listFilter === 'unplaced' && C.cellOf[f.id]) return false;
         if (u.listFilter === 'pinned' && !L.pins[f.id]) return false;
         if (!q) return true;
-        return [f.name, f.owner, f.items, f.category, (f.tags || []).join(' ')].join(' ').toLowerCase().includes(q);
+        return [f.name, f.owner, f.items, f.category, (f.tags || []).join(' '), (f.forms || []).join(' ')].join(' ').toLowerCase().includes(q);
       });
       rows.sort((a, b) => (C.cellOf[a.id] ? 1 : 0) - (C.cellOf[b.id] ? 1 : 0) || (C.nums[C.cellOf[a.id]] || 0) - (C.nums[C.cellOf[b.id]] || 0));
       if (!rows.length) listBox.appendChild(h('p', { class: 'muted small center' }, q ? '검색 결과가 없어요.' : '해당하는 농가가 없어요.'));
@@ -1356,6 +1519,27 @@
         )
       )
     );
+    const rs = ins.rawStats;
+    if (rs)
+      side.appendChild(
+        section(
+          '같은 원재료 농가끼리 거리',
+          h(
+            'div',
+            { class: 'raw-stats' },
+            h('div', null, h('small', null, '가장 가까운'), h('b', { class: rs.min <= 1 ? 'bad' : rs.min <= 2 ? 'warn' : 'good' }, rs.facing && rs.min <= 1 ? '마주봄' : `${Math.round(rs.min * 10) / 10}칸`)),
+            h('div', null, h('small', null, '평균'), h('b', null, `${Math.round(rs.avg * 10) / 10}칸`)),
+            h('div', null, h('small', null, '2칸 이내'), h('b', { class: rs.within2 ? 'warn' : 'good' }, `${rs.within2}쌍`)),
+            h('div', null, h('small', null, '마주봄'), h('b', { class: rs.facing ? 'bad' : 'good' }, `${rs.facing}쌍`))
+          ),
+          h(
+            'button',
+            { class: 'link-btn small', onclick: () => setHighlight({ a: rs.minPair.a.key, b: rs.minPair.b.key }) || scrollToCell(rs.minPair.a.key) },
+            `가장 가까운 쌍: ${C.nums[rs.minPair.a.key]}번 ${FM.shortName(rs.minPair.a.farm.name)} ↔ ${C.nums[rs.minPair.b.key]}번 ${FM.shortName(rs.minPair.b.farm.name)} (${rs.minPair.rel.label})`
+          ),
+          h('p', { class: 'muted small' }, `원재료가 같은 ${rs.pairs}쌍 기준 (쌀·소금처럼 흔한 재료만 겹치는 쌍은 제외). 자동 배치는 이 거리를 최대한 벌려요.`)
+        )
+      );
     side.appendChild(
       section(
         null,
@@ -1366,10 +1550,11 @@
           h(
             'ul',
             { class: 'small' },
-            h('li', null, '유사도: 같은 품목군 +', st.wCat, ', 공통 품목(예: 꿀·떡·사과) +', st.wTag),
-            h('li', null, '거리 가중치: 바로 옆 1 · 대각선 0.5 · 한 칸 건너 0.25'),
-            h('li', null, '근접 위험도 = 유사도 × 거리 가중치 → 위험 ≥ 0.6 · 주의 ≥ 0.3 · 참고 ≥ 0.15'),
-            h('li', null, '예) 공통 품목이 바로 옆 = 위험, 같은 품목군만 바로 옆 = 주의, 같은 품목군이 대각선 = 참고')
+            h('li', null, `유사도 = 같은 원재료 +${st.wRaw} (결과물이 달라도: 포도↔와인, 참깨↔참기름) · 같은 계열 +일부 (블루베리↔아로니아) · 같은 형태 +${st.wForm} (즙·청·떡·젓갈…) · 같은 품목군 +${st.wCat}`),
+            h('li', null, `거리 = 1/칸 수 (바로 옆 1 · 대각선 0.71 · 2칸 0.5 · 3칸 0.33 …, ${st.radius >= 99 ? '전체' : st.radius + '칸'}까지 계산)`),
+            h('li', null, '마주봄 = 통로 건너 앞면끼리 정면이면 1 (바로 옆과 같음), 비껴서 0.75 · 등 맞댐은 0.4배로 약하게'),
+            h('li', null, `근접 위험도 = 유사도 × 거리 → 위험 ≥ ${FM.LEVELS.danger} · 주의 ≥ ${FM.LEVELS.warn} · 참고 ≥ ${FM.LEVELS.info}`),
+            h('li', null, '예) 같은 원재료가 바로 옆·마주봄·대각선 = 위험, 2칸 거리 = 주의, 3~4칸 = 참고')
           )
         )
       )
@@ -1398,7 +1583,7 @@
         sel('선으로 이을 쌍', 'lineScope', [
           ['warn', '위험·주의만 (기본)'],
           ['info', '참고까지'],
-          ['tag', '공통 품목은 모두'],
+          ['tag', '원재료·형태가 겹치면 모두'],
           ['all', '같은 품목군까지 모두'],
         ]),
         st.lineScope === 'tag' || st.lineScope === 'all'
@@ -1435,12 +1620,12 @@
                 h(
                   'div',
                   { class: 'legend-row' },
-                  h('span', { class: 'legend-line' + (l.kind === 'cat' ? ' dashed' : ''), style: { borderColor: l.color } }),
+                  h('span', { class: 'legend-line' + (l.kind === 'form' ? ' dashed' : l.kind === 'cat' ? ' dotted' : ''), style: { borderColor: l.color } }),
                   h('span', null, l.label),
                   h('b', null, l.count)
                 )
               ),
-              h('p', { class: 'muted small' }, '실선 = 공통 품목, 점선 = 같은 품목군만. 굵을수록 가까워요.')
+              h('p', { class: 'muted small' }, '실선 = 같은 원재료·계열, 긴 점선 = 같은 형태, 짧은 점선 = 같은 품목군만. 굵을수록 가깝거나 마주 봐요.')
             )
           : h('p', { class: 'ok-text' }, '✓ 선으로 이을 만큼 가까운 유사 품목이 없어요')
       )

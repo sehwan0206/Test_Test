@@ -422,3 +422,49 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .popmenu-item small { margin-left: auto; color: var(--muted); font-size: .74rem; }
 .lv-grid.tiny .cell .cempty, .lv-grid.tiny .cell .ccat { display: none; }
 .lv-grid.tiny .cell .cname { margin-top: 4px; -webkit-line-clamp: 1; }
+
+/* ---------- 원재료·형태 태그 ---------- */
+.tag.raw { background: #e6efff; color: #24489a; }
+.tag.form { background: #eef0ec; color: #4c574f; }
+.tag.manual { box-shadow: inset 0 0 0 1px #e0b65a; }
+.td-tags { min-width: 160px; max-width: 280px; }
+.btn-tag { border: 0; cursor: pointer; font: inherit; font-size: .8rem; padding: 2px 8px; }
+.btn-tag:hover { filter: brightness(.95); }
+.roster-summary.overlap { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
+
+/* ---------- 부스 방향 ---------- */
+.cell.booth.f-u::after, .cell.booth.f-d::after, .cell.booth.f-l::after, .cell.booth.f-r::after {
+  content: ''; position: absolute; background: #2f7d4f; border-radius: 2px; pointer-events: none;
+}
+.cell.booth.f-u::after { top: 0; left: 18%; right: 18%; height: 4px; }
+.cell.booth.f-d::after { bottom: 0; left: 18%; right: 18%; height: 4px; }
+.cell.booth.f-l::after { left: 0; top: 18%; bottom: 18%; width: 4px; }
+.cell.booth.f-r::after { right: 0; top: 18%; bottom: 18%; width: 4px; }
+.cell .cdir { position: absolute; font-size: calc(9px * var(--z, 1)); color: #2f7d4f; line-height: 1; pointer-events: none; opacity: .9; }
+.cell .cdir.manual { color: #1e5bd8; }
+.cell .cdir.d-u { top: 5px; left: 50%; transform: translateX(-50%); }
+.cell .cdir.d-d { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.cell .cdir.d-l { left: 5px; top: 50%; transform: translateY(-50%); }
+.cell .cdir.d-r { right: 5px; top: 50%; transform: translateY(-50%); }
+.mode-edit .cell .cdir { font-size: calc(13px * var(--z, 1)); }
+.lv-grid:not(.mode-edit) .cell .cdir { display: none; }
+.dir-pick { display: flex; flex-direction: column; gap: 8px; }
+.dir-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 280px; }
+.dir-btn { border: 1px solid var(--line-strong); background: #fff; border-radius: 8px; padding: 7px 4px; cursor: pointer; font-weight: 600; font-size: .85rem; }
+.dir-btn:hover { border-color: var(--brand); }
+.dir-btn.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* ---------- 배치 완료 / 거리 통계 ---------- */
+.done-banner { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: #e9f6ee; border: 1.5px solid #9fd2b1; border-radius: 10px; padding: 6px 10px; }
+.done-banner b { color: #1f6b3e; margin-right: 4px; }
+.raw-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.raw-stats > div { background: #f6f8f5; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; }
+.raw-stats small { color: var(--muted); font-size: .72rem; }
+.raw-stats b { font-size: 1.05rem; }
+.raw-stats b.good { color: var(--ok); }
+.raw-stats b.warn { color: var(--warn); }
+.raw-stats b.bad { color: var(--danger); }
+.link-btn { border: 0; background: none; padding: 0; color: #1e5bd8; cursor: pointer; text-align: left; text-decoration: underline; }
+.legend-line.dotted { border-top-style: dotted; }

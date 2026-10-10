@@ -207,21 +207,30 @@
           }
           const f = farmById[L.assign[k]];
           const pin = f && L.pins[f.id] ? ' 📌' : '';
+          const arrow = cell.dir ? ' ' + FM.DIR_ARROW[cell.dir] : '';
+          if (cell.dir) {
+            // 앞면(손님 쪽)을 굵은 선으로
+            const side = { u: 'top', d: 'bottom', l: 'left', r: 'right' }[cell.dir];
+            xc.border = Object.assign({}, BORDER, { [side]: { style: 'thick', color: { argb: 'FF2F7D4F' } } });
+          }
           if (f) {
             xc.value = {
               richText: [
-                { text: nums[k] + pin + '\n', font: { size: 8, color: { argb: 'FF666666' } } },
+                { text: nums[k] + arrow + pin + '\n', font: { size: 8, color: { argb: 'FF666666' } } },
                 { text: FM.shortName(f.name), font: { bold: true, size: 10 } },
                 { text: '\n' + (f.category || ''), font: { size: 7, color: { argb: 'FF666666' } } },
               ],
             };
             xc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(FM.catColor(f.category).bgHex) } };
           } else {
-            xc.value = { richText: [{ text: nums[k] + '\n', font: { size: 8, color: { argb: 'FF999999' } } }, { text: '빈 자리', font: { size: 9, color: { argb: 'FFAAAAAA' } } }] };
+            xc.value = { richText: [{ text: nums[k] + arrow + '\n', font: { size: 8, color: { argb: 'FF999999' } } }, { text: '빈 자리', font: { size: 9, color: { argb: 'FFAAAAAA' } } }] };
           }
         }
         // 범례
         let lr = R0 + (b.maxR - b.minR) + 2;
+        ws.getCell(lr - 1, 2).value = '▲▼◀▶ · 굵은 초록 테두리 = 부스 앞면(손님 쪽)';
+        ws.getCell(lr - 1, 2).font = { size: 9, color: { argb: 'FF2F7D4F' } };
+        lr += 1;
         ws.getCell(lr, 2).value = '품목군 범례';
         ws.getCell(lr, 2).font = { bold: true };
         const cats = {};
@@ -283,11 +292,11 @@
       { header: '장소', key: 'place', width: 8 },
     ];
     ev.days.forEach((d, i) => cols.push({ header: FM.weekday(d.date) + ' ' + FM.fmtDay(d.date).replace(/\(.\)$/, ''), key: 'd' + i, width: 12 }));
-    cols.push({ header: '유사 품목 태그', key: 'tags', width: 30 }, { header: '비고', key: 'memo', width: 20 });
+    cols.push({ header: '원재료', key: 'tags', width: 30 }, { header: '제품 형태', key: 'forms', width: 24 }, { header: '비고', key: 'memo', width: 20 });
     rs.columns = cols;
     const numsByDay = inspections.map((x) => ({ map: FM.farmCellMap(x.day.layout), nums: x.nums }));
     ev.farms.forEach((f, idx) => {
-      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, tags: (f.tags || []).join(', '), memo: f.memo };
+      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, tags: (f.tags || []).join(', '), forms: (f.forms || []).join(', '), memo: f.memo };
       ev.days.forEach((d, i) => {
         if (!f.days[d.id]) return (row['d' + i] = '');
         const k = numsByDay[i].map[f.id];
@@ -336,7 +345,9 @@
 
   X.reasonText = function (p) {
     const parts = [];
-    if (p.shared.length) parts.push('공통 품목: ' + p.shared.join(', '));
+    if (p.sharedRaw && p.sharedRaw.length) parts.push('같은 원재료: ' + p.sharedRaw.join(', '));
+    else if (p.sharedFam && p.sharedFam.length) parts.push('같은 계열: ' + p.sharedFam.join(', '));
+    if (p.sharedForms && p.sharedForms.length) parts.push('같은 형태: ' + p.sharedForms.join(', '));
     if (p.sameCat) parts.push('같은 품목군: ' + FM.normCategory(p.a.farm.category));
     return parts.join(' / ');
   };
@@ -399,7 +410,7 @@
     g.fillText(`${venue.name} ${ev.title} — ${day.round ? day.round + ' ' : ''}${FM.fmtDay(day.date)} 배치도`, PAD, PAD - 6);
     g.font = font(400, 13);
     g.fillStyle = '#555';
-    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn}`, PAD, PAD + 26);
+    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn} · 초록 막대 = 부스 앞면(손님 쪽)`, PAD, PAD + 26);
     const ox = PAD + (W - PAD * 2 - gridW) / 2;
     const oy = HEAD + PAD - 10;
     const pos = (r, c) => ({ x: ox + (c - b.minC) * (CW + GAP), y: oy + (r - b.minR) * (CH + GAP) });
@@ -449,6 +460,15 @@
       if (!f) g.setLineDash([4, 3]);
       g.stroke();
       g.setLineDash([]);
+      if (cell.dir) {
+        // 앞면(손님 쪽) 표시 막대
+        g.fillStyle = '#2f7d4f';
+        const T = 5;
+        if (cell.dir === 'u') g.fillRect(x + 10, y, CW - 20, T);
+        else if (cell.dir === 'd') g.fillRect(x + 10, y + CH - T, CW - 20, T);
+        else if (cell.dir === 'l') g.fillRect(x, y + 10, T, CH - 20);
+        else g.fillRect(x + CW - T, y + 10, T, CH - 20);
+      }
       texts.push(() => {
         const halo = (txt, tx, ty) => {
           g.lineWidth = 3;
@@ -484,7 +504,7 @@
         g.strokeStyle = p.color;
         g.globalAlpha = 0.85;
         g.lineWidth = 2 + 4 * Math.min(1, p.sev);
-        g.setLineDash(p.kind === 'cat' ? [6, 4] : []);
+        g.setLineDash(p.kind === 'form' ? [9, 5] : p.kind === 'cat' ? [2, 6] : []);
         g.beginPath();
         g.moveTo(a.x + CW / 2, a.y + CH / 2);
         g.lineTo(bb.x + CW / 2, bb.y + CH / 2);
@@ -526,7 +546,7 @@
         const yy = ly + 20 + Math.floor(i / 3) * 24;
         g.strokeStyle = l.color;
         g.lineWidth = 3;
-        g.setLineDash(l.kind === 'cat' ? [6, 4] : []);
+        g.setLineDash(l.kind === 'form' ? [9, 5] : l.kind === 'cat' ? [2, 6] : []);
         g.beginPath();
         g.moveTo(lx, yy + 7);
         g.lineTo(lx + 22, yy + 7);

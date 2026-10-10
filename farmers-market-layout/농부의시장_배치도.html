@@ -431,9 +431,55 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .lv-grid.tiny .cell .cempty, .lv-grid.tiny .cell .ccat { display: none; }
 .lv-grid.tiny .cell .cname { margin-top: 4px; -webkit-line-clamp: 1; }
 
+/* ---------- 원재료·형태 태그 ---------- */
+.tag.raw { background: #e6efff; color: #24489a; }
+.tag.form { background: #eef0ec; color: #4c574f; }
+.tag.manual { box-shadow: inset 0 0 0 1px #e0b65a; }
+.td-tags { min-width: 160px; max-width: 280px; }
+.btn-tag { border: 0; cursor: pointer; font: inherit; font-size: .8rem; padding: 2px 8px; }
+.btn-tag:hover { filter: brightness(.95); }
+.roster-summary.overlap { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
+
+/* ---------- 부스 방향 ---------- */
+.cell.booth.f-u::after, .cell.booth.f-d::after, .cell.booth.f-l::after, .cell.booth.f-r::after {
+  content: ''; position: absolute; background: #2f7d4f; border-radius: 2px; pointer-events: none;
+}
+.cell.booth.f-u::after { top: 0; left: 18%; right: 18%; height: 4px; }
+.cell.booth.f-d::after { bottom: 0; left: 18%; right: 18%; height: 4px; }
+.cell.booth.f-l::after { left: 0; top: 18%; bottom: 18%; width: 4px; }
+.cell.booth.f-r::after { right: 0; top: 18%; bottom: 18%; width: 4px; }
+.cell .cdir { position: absolute; font-size: calc(9px * var(--z, 1)); color: #2f7d4f; line-height: 1; pointer-events: none; opacity: .9; }
+.cell .cdir.manual { color: #1e5bd8; }
+.cell .cdir.d-u { top: 5px; left: 50%; transform: translateX(-50%); }
+.cell .cdir.d-d { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.cell .cdir.d-l { left: 5px; top: 50%; transform: translateY(-50%); }
+.cell .cdir.d-r { right: 5px; top: 50%; transform: translateY(-50%); }
+.mode-edit .cell .cdir { font-size: calc(13px * var(--z, 1)); }
+.lv-grid:not(.mode-edit) .cell .cdir { display: none; }
+.dir-pick { display: flex; flex-direction: column; gap: 8px; }
+.dir-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 280px; }
+.dir-btn { border: 1px solid var(--line-strong); background: #fff; border-radius: 8px; padding: 7px 4px; cursor: pointer; font-weight: 600; font-size: .85rem; }
+.dir-btn:hover { border-color: var(--brand); }
+.dir-btn.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* ---------- 배치 완료 / 거리 통계 ---------- */
+.done-banner { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; background: #e9f6ee; border: 1.5px solid #9fd2b1; border-radius: 10px; padding: 6px 10px; }
+.done-banner b { color: #1f6b3e; margin-right: 4px; }
+.raw-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.raw-stats > div { background: #f6f8f5; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; }
+.raw-stats small { color: var(--muted); font-size: .72rem; }
+.raw-stats b { font-size: 1.05rem; }
+.raw-stats b.good { color: var(--ok); }
+.raw-stats b.warn { color: var(--warn); }
+.raw-stats b.bad { color: var(--danger); }
+.link-btn { border: 0; background: none; padding: 0; color: #1e5bd8; cursor: pointer; text-align: left; text-decoration: underline; }
+.legend-line.dotted { border-top-style: dotted; }
+
 </style>
-<meta name="generator" content="농부의시장 배치도 도우미 2026.10.10 03:22">
-<script>window.FM_BUILD = "2026.10.10 03:22";</script>
+<meta name="generator" content="농부의시장 배치도 도우미 2026.10.10 03:54">
+<script>window.FM_BUILD = "2026.10.10 03:54";</script>
 </head>
 <body>
 <header id="topbar" class="topbar"></header>
@@ -518,6 +564,191 @@ https://github.com/nodeca/pako/blob/main/LICENSE
  */function n(e){return e>=65&&e<=90||95===e||e>=97&&e<=122||e>=192&&e<=214||e>=216&&e<=246||e>=248&&e<=767||e>=880&&e<=893||e>=895&&e<=8191||e>=8204&&e<=8205||e>=8304&&e<=8591||e>=11264&&e<=12271||e>=12289&&e<=55295||e>=63744&&e<=64975||e>=65008&&e<=65533||e>=65536&&e<=983039}Object.defineProperty(r,"__esModule",{value:!0}),r.NC_NAME_START_CHAR="A-Z_a-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c-\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd\ud800\udc00-\udb7f\udfff",r.NC_NAME_CHAR="-"+r.NC_NAME_START_CHAR+".0-9\xb7\u0300-\u036f\u203f-\u2040",r.NC_NAME_START_CHAR_RE=new RegExp("^["+r.NC_NAME_START_CHAR+"]$","u"),r.NC_NAME_CHAR_RE=new RegExp("^["+r.NC_NAME_CHAR+"]$","u"),r.NC_NAME_RE=new RegExp("^["+r.NC_NAME_START_CHAR+"]["+r.NC_NAME_CHAR+"]*$","u"),r.isNCNameStartChar=n,r.isNCNameChar=function(e){return n(e)||45===e||46===e||e>=48&&e<=57||183===e||e>=768&&e<=879||e>=8255&&e<=8256}},{}]},{},[15])(15)}));
 //# sourceMappingURL=exceljs.min.js.map
 </script>
+<script>/* js/dictionary.js */
+/*
+ * 품목 사전 — 원재료 / 제품 형태 (설정에서 수정 가능)
+ *
+ * 키워드 문법:  꿀 = 포함 · =배 = 정확히 일치 · ^묵 = ~로 시작 · 청$ = ~로 끝남 · !김치 = 제외
+ * 신청품목은 쉼표·괄호·공백으로 나눠 낱말마다 비교합니다. 괄호 안 재료(예: 침출차(작두콩, 여주))도 원재료로 봅니다.
+ */
+(function (root) {
+  'use strict';
+  const FM = (root.FM = root.FM || {});
+
+  // ---------------------------------------------------------------------------
+  // 원재료 사전 — 결과물(즙·잼·청·식초·술·떡…)이 달라도 원재료가 같으면 같은 태그
+  //   「계열 > 원재료: 키워드, …」   원재료 이름 뒤 (0.5) = 흔한 재료라 가중치를 낮춤
+  //   「@계열: 0.4」                원재료는 달라도 같은 계열이면 이만큼 비슷하다고 봄 (없으면 0)
+  // ---------------------------------------------------------------------------
+  FM.DEFAULT_RAW_DICT = `# 계열 가중치 (원재료는 다르지만 같은 계열일 때)
+@베리: 0.4
+@감귤: 0.5
+@견과: 0.3
+@곡물: 0.25
+@깨: 0.7
+@과일: 0.1
+@채소: 0.1
+@약초: 0.3
+@생선: 0.35
+@조개: 0.4
+@해조: 0.5
+@육류: 0.4
+
+꿀벌 > 꿀: 꿀, 허니, 로얄젤리, 로열젤리, =화분, 꽃가루, 프로폴리스, 밀랍, !꿀떡, !꿀빵, !꿀배, !꿀고구마
+과일 > 사과: 사과, 홍로, 감홍, 부사, 시나노, 아리수
+과일 > 배: =배, 신고배, 배즙, 배청, 배도라지
+과일 > 포도: 포도, 샤인머스켓, 샤인머스캣, 머스켓, 머스캣, 거봉, 캠벨, 머루, 와인, 뱅쇼, !포도씨
+과일 > 복숭아: 복숭아, 천도, 황도, 백도
+과일 > 자두: 자두
+과일 > 살구: 살구
+과일 > 매실: 매실
+과일 > 감: 단감, 대봉, 홍시, 곶감, 감말랭이, 반시, 연시, =감, 감젤리, 감식초, 감즙, 감잼, =말랭이
+과일 > 참다래: 참다래, 키위, =다래
+과일 > 대추: 대추
+과일 > 참외: 참외, 울외
+과일 > 모과: 모과
+과일 > 포포: 포포
+과일 > 수박·멜론: 수박, 멜론
+베리 > 딸기: 딸기, !산딸기
+베리 > 산딸기·복분자: 산딸기, 복분자
+베리 > 블루베리: 블루베리
+베리 > 아로니아: 아로니아
+베리 > 오디·뽕: 오디, 뽕잎, =뽕, !꾸지뽕
+베리 > 보리수: 보리수
+베리 > 오미자: 오미자
+감귤 > 귤·만감: 귤, 한라봉, 천혜향, 레드향, 황금향, 청귤
+감귤 > 유자: 유자
+감귤 > 레몬: 레몬
+견과 > 밤: 밤, 칼집밥, !밤꿀, !밤호박, !약밤
+견과 > 잣: 잣
+견과 > 호두: 호두
+견과 > 땅콩: 땅콩
+견과 > 은행: 은행
+곡물 > 쌀(0.5): =쌀, ^쌀, 백미, 현미, 찹쌀, 흑미, 누룽지, 연쌀
+곡물 > 보리: 보리, !보리수
+기타 > 식혜·엿기름: 식혜, 엿기름, 단술
+곡물 > 귀리: 귀리
+곡물 > 옥수수: 옥수수, 강냉이
+곡물 > 율무: 율무
+곡물 > 팥: 팥
+곡물 > 잡곡(0.7): 잡곡, 수수, 차조, 매조, =조, 기장, 메밀, 오곡, 녹두, !옥수수
+곡물 > 콩: 콩$, 서리태, 콩가루, 콩물, 두부, 대두, 백태, !작두콩
+약초 > 작두콩: 작두콩, 작주콩
+깨 > 참깨: 참깨, 참기름, 통깨, =깨, 볶은깨, 볶음깨, 깨소금
+깨 > 들깨: 들깨, 들기름
+채소 > 고추: 고추, 고춧가루, 할라피뇨, 할라피뇬, !고추장
+채소 > 마늘: 마늘, !산마늘
+채소 > 생강: 생강
+채소 > 양파: 양파
+채소 > 파: 대파, 쪽파, =파, 파김치
+채소 > 배추: 배추, !양배추
+채소 > 양배추: 양배추
+채소 > 무: =무, 무말랭이, 알타리, 총각무, 열무, 동치미, 깍두기, 무청
+채소 > 갓: =갓, 갓김치, 갓짱아치, 갓장아찌, 갓피클
+채소 > 감자: 감자, !돼지감자
+채소 > 돼지감자: 돼지감자
+채소 > 고구마: 고구마
+채소 > 호박: 호박, !호박고구마
+채소 > 토마토: 토마토
+채소 > 오이: 오이
+채소 > 가지: 가지, !여러가지, !가지수
+채소 > 쌈채소: 쌈채, 상추, 케일, 로메인, 브로콜리
+채소 > 허브: 허브, 바질, =딜, 로즈마리, 민트
+채소 > 여주: 여주
+채소 > 비트: 비트
+채소 > 차요테: 차요테, 차요태
+채소 > 마: 둥근마, 열매마, =마, 마옥고, 마즙, 마가루
+채소 > 박·동과: 동과, 수세미
+채소 > 카사바: 카사바
+채소 > 연(연잎·연근): 연잎, 연근, 연현미, 연쌀, 연도라, 연크치
+산나물 > 산나물: 산나물, 나물, 곰취, 곤드레, 취나물, =취, 도솔취, 고사리, 명이, 산마늘, 눈개승마, 두릅, 엄나무, 부지갱이, 어수리, 다래순, 참죽, 방풍, 영아자, 파르륵, 죽순, 고비, 참나물
+약초 > 도라지: 도라지, 연도라
+약초 > 더덕: 더덕
+약초 > 인삼: 인삼, 홍삼, 수삼, 산양삼, 새싹삼, 흑삼, 산삼
+약초 > 황기: 황기
+약초 > 칡: 칡
+약초 > 헛개: 헛개
+약초 > 구기자: 구기자
+약초 > 둥굴레: 둥굴레
+약초 > 어성초: 어성초
+약초 > 지황: 지황
+약초 > 강황: 강황
+약초 > 계피: 계피
+약초 > 쑥: 쑥, !쑥갓
+약초 > 구절초: 구절초
+약초 > 야관문: 야관문
+약초 > 쌍화차: 쌍화
+약초 > 천년초: 천년초
+약초 > 꾸지뽕: 꾸지뽕
+약초 > 와송: 와송
+약초 > 굼벵이: 굼벵이
+버섯 > 버섯: 버섯, 표고, 느타리, 송이, 목이, 노루궁뎅이, 상황, 영지, 동충하초, 팽이
+해조 > 김: 김, !김치, !김장, !튀김, !김밥
+해조 > 미역·다시마: 미역, 다시마, 감태, 톳, 매생이, 파래
+생선 > 멸치: 멸치, 디포리
+생선 > 새우: 새우, 토하
+생선 > 오징어: 오징어, 꼴뚜기, 한치
+생선 > 명태: 명태, 황태, 북어, 명란, 창난, 창란, 코다리, 노가리
+생선 > 낙지: 낙지
+생선 > 갈치: 갈치
+생선 > 조기·굴비: 굴비, 조기
+생선 > 가자미: 가자미
+생선 > 청어: 청어
+생선 > 밴댕이: 밴댕이
+생선 > 까나리: 까나리
+조개 > 재첩: 재첩
+조개 > 바지락: 바지락
+조개 > 홍합: 홍합
+조개 > 굴: =굴, 굴젓
+조개 > 전복: 전복
+조개 > 게: 게장, 꽃게, 대게
+유제품 > 우유: 우유, 치즈, 요거트, 요구르트, 발효유, 버터, 밀크, !꿀떡
+알 > 계란: 계란, 달걀, 란$, 유정란, 메추리알, !명란, !창란
+육류 > 닭: =닭, 닭고기, 토종닭, 오골계, 삼계탕
+육류 > 소·돼지: 한우, 한돈, 돼지고기, 소고기, 육포, 갈비, 곰탕, 사골, 불고기
+꽃 > 식용꽃: 꽃차, 국화, 목련, 마리골드, 메리골드, 캐모마일, 차풀, !꿀, !꽃가루
+기타 > 소금(0.5): 소금, 천일염, 함초
+기타 > 도토리·묵: 도토리, ^묵, 건조묵, !묵은
+기타 > 곤약: 곤약
+기타 > 목공예: 목기, 나무그릇, 도마, 수저, 주걱, 좌탁, 조각품`;
+
+  // ---------------------------------------------------------------------------
+  // 제품 형태 사전 — 원재료가 달라도 같은 형태끼리는 손님이 겹침
+  //   「형태: 키워드, …」   형태 이름 뒤 (0.5) = 흔한 부가 상품이라 가중치를 낮춤
+  // ---------------------------------------------------------------------------
+  FM.DEFAULT_FORM_DICT = `즙·주스: 즙, 주스, 쥬스, 원액, 엑기스, 주스리
+청·시럽: 청$, 수제청, 과일청, 강청, 조청, 시럽, 청으로
+진액·액상(0.8): 진액, 추출액, 진액고, 발효액, 농축액, 콜라겐, 액상
+잼·소스: 잼, 쨈, 퓨레, 콩포트, 페스토, 스프레드, 소스, 드레싱
+차: 차$, 티백, 침출차, 꽃차, !자동차
+식초: 식초, 발사믹, 발효초
+술: 와인, 증류주, 막걸리, 약주, 담금주, 소주, 맥주, 뱅쇼, 백주, 전통주, 과실주
+떡: 떡, 인절미, 송편, 설기, 모찌, 경단, 절편, 증편, 약밥, 화과자, 만쥬, !떡갈비
+한과·강정: 약과, 강정, 한과, 유과, 정과, 오란다, =엿, 뻥튀기, 강냉이, 뻥$
+스낵·칩·젤리(0.7): 스낵, 칩, 과자, 젤리, 쿠키, 그래놀라, 주전부리, 아이스크림, !로얄젤리, !로열젤리, !화과자
+부각·튀각: 부각, 튀각
+빵: 빵, 베이글, 식빵, 치아바타, 샌드, 스콘, 케이크, 머핀, 꽈배기, 핫도그
+음료(0.8): 식혜, 수정과, 음료, 라떼, 에이드, 스무디
+가루·분말(0.5): 분말, 가루, 미숫가루, !꽃가루, !고춧가루
+환(0.7): 환$, =환
+말림·건조(0.5): 건조, ^건, 말랭이, 동결건조, !건강
+김치: 김치, 깍두기, 동치미, 겉절이, 섞박지, 꼬들빼기, 소박이, =알타리
+장류: 된장, 고추장, 간장, 막장, 청국장, 쌈장, 메주, !어간장, !게장, !장아찌, !밥$, !소스
+장아찌·절임·무침: 장아찌, 짱아치, 절임, 피클, 무침, 숙회
+젓갈·액젓: 젓, 젓갈, 액젓, 어간장, 식해, 명란, 창난, 창란
+게장·해산물장: 게장, 전복장, 새우장
+기름: 기름, 오일, !엿기름
+건어물: 건어물, 건해산물, 반건조, 황태포, 황태채, 마른김, 조미김, 김자반, 곱창김, =멸치, =미역, =다시마, =톳, =감태, 건홍합, 건새우, 굴비
+즉석·간편식(0.7): 밀키트, 즉석, 도시락, 간편식, 국$, 수프, 스프, 죽$, 밥$, 만두, 떡볶이, 파우치, !떡국, !약밥, !칼집밥, !도시락김
+묵: ^묵, 건조묵, 묵가루
+유제품: 치즈, 요거트, 요구르트, 우유, 발효유, !꿀떡
+소금: 소금, 천일염
+목공예: 목기, 도마, 수저, 주걱, 그릇, 조각품`;
+
+  FM.DICT_VERSION = 2;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
 <script>/* js/core.js */
 /*
  * 농부의시장 배치도 도우미 — 공통 데이터 모델 / 유틸리티
@@ -551,75 +782,28 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     { venue: 'yangcheon', title: '17,18회차', days: [['2026-11-14', '17회차'], ['2026-11-15', '18회차']] },
   ];
 
-  // ---------------------------------------------------------------------------
-  // 품목 키워드 사전 (설정에서 수정 가능)
-  //   그룹명: 키워드, 키워드, ...
-  //   키워드 문법:  꿀 = 포함 / =배 = 정확히 일치 / ^묵 = ~로 시작 / 청$ = ~로 끝남 / !김치 = 제외
-  //   괄호 안 내용(예: 사과(홍로, 부사))은 품종·구성 설명으로 보고 무시합니다.
-  // ---------------------------------------------------------------------------
-  FM.DEFAULT_KEYWORDS = [
-    '꿀·양봉: 꿀, 로얄젤리, 로열젤리, 꽃가루, =화분, 밀랍, 프로폴리스, 허니, !꿀떡, !꿀빵',
-    '사과: 사과, 홍로, 감홍, 부사, 시나노, 아리수',
-    '배: =배, 신고배, 배즙, 배도라지',
-    '포도: 포도, 샤인머스켓, 샤인머스캣, 머스켓, 머스캣, 거봉, 캠벨, 머루, !포도씨, !식초',
-    '딸기: 딸기',
-    '베리류: 블루베리, 아로니아, 오디, 복분자, 크랜베리, !식초',
-    '복숭아·자두·살구: 복숭아, 자두, 살구, 천도, 매실, !장아찌',
-    '감: 단감, 대봉, 홍시, 곶감, 말랭이, 반시, 연시, =감',
-    '감귤·유자: 귤, 한라봉, 천혜향, 레드향, 황금향, 유자, !요거트',
-    '참다래·키위: 참다래, 키위',
-    '대추: 대추',
-    '밤·견과: 알밤, 군밤, 깐밤, 칼집밤, 칼집밥, 반밤, =밤, 잣, 호두, 땅콩, 은행, 아몬드',
-    '버섯: 버섯, 표고, 느타리, 송이, 목이, 노루궁뎅이, 상황, 영지, 동충하초, 팽이',
-    '산나물·약초: 고사리, 더덕, 도라지, 명이, 산마늘, 눈개승마, 엄나무, 두릅, 취나물, 곰취, 나물, 황기, 칡, 헛개, 당귀, 오가피',
-    '인삼·홍삼: 인삼, 홍삼, 수삼, 흑삼, 산양삼, 새싹삼',
-    '채소: 토마토, 오이, 고추, 고춧가루, 양파, 감자, 고구마, 배추, =무, 상추, 대파, 쪽파, =파, 양배추, 호박, 가지, 생강, 마늘, 당근, 쌈채, 케일, 로메인, 허브, 바질, =딜, 시금치, 브로콜리, 파프리카, 차요태, 비트, 여주, 콜라비, 연근, 우엉, 부추, 미나리, !고추장, !차$, !장아찌, !김치',
-    '김치: 김치, 깍두기, 겉절이, 섞박지, 동치미, 소박이, 알타리, 열무, 묵은지',
-    '장류: 된장, 고추장, 간장, 막장, 청국장, 쌈장, 메주, 장소금, !어간장, !게장',
-    '장아찌·절임: 장아찌, 짱아찌, 절임, 피클',
-    '젓갈·액젓: 젓, 명란, 창난, 액젓, 어간장, 까나리',
-    '게장·해산물: 게장, 전복, 꽃게, 새우장, 대게, 낙지, 오징어, 문어, 새우, =굴, 굴비, !젓, !어간장',
-    '조개·재첩: 재첩, 바지락, 홍합, 조개, 꼬막, 가리비',
-    '김·해조류: 김, 미역, 다시마, 톳, 감태, 매생이, 파래, 꼬시래기, !김치, !김장, !튀김, !식초',
-    '건어물: 멸치, 황태, 북어, 쥐포, 건어물, 노가리, 건새우, 꼴뚜기, 실치, 디포리, !어간장, !액젓',
-    '떡: 떡, 인절미, 송편, 설기, 모찌, 경단, 절편, 시루, 증편, !떡갈비',
-    '한과·간식: 약과, 강정, 한과, 유과, 정과, 부각, 오란다, 누룽지, 쿠키, 젤리, 양갱, 칩, 과자, 주전부리, 그래놀라, !로얄젤리, !로열젤리',
-    '빵·베이커리: 빵, 베이글, 식빵, 치아바타, 샌드, 스콘, 케이크, 머핀, 휘낭시에, 마들렌, 파이, 카스테라, 와플, 꽈배기, !빵가루',
-    '음료: 식혜, 수정과, 음료, 주스, 쥬스, 라떼, 에이드, 스무디, 커피, 두유, 미숫가루',
-    '청·즙·진액: 청$, 즙, 진액, 원액, 발효액, 추출액, 엑기스, 농축액',
-    '차: 차$, 티백, 잎차',
-    '식초: 식초, 발사믹, 발효초',
-    '잼·소스: 잼, 쨈, 퓨레, 페스토, 스프레드, 소스, 드레싱, 시럽',
-    '주류: 와인, 증류주, 막걸리, 약주, 담금주, 소주, 맥주, 뱅쇼, 전통주, 탁주, 과실주, !식초',
-    '유제품: 치즈, 요거트, 요구르트, 우유, 버터',
-    '계란: 계란, 달걀, 란$, 유정란, 메추리알, !명란, !창란',
-    '육류·육가공: 한우, 한돈, 돼지고기, 소고기, =닭, 닭고기, 오리, 육포, 고기, 정육, 소시지, 햄, 떡갈비, 불고기, 곰탕, 사골',
-    '곡물·잡곡: =쌀, 백미, 현미, 찹쌀, 흑미, 잡곡, 서리태, 콩$, 팥, 귀리, 율무, 보리, 수수, 차조, 매조, 기장, 메밀, 옥수수, 오곡, 녹두, 들깨, 참깨, 통깨, !차$, !식초, !발효, !떡, !모찌',
-    '참기름·들기름: 기름, 오일',
-    '묵: ^묵, 도토리, 건조묵, !묵은',
-    '즉석·간편식: 밀키트, 도시락, 간편식, 국$, 수프, 스프, !떡국, !청국',
-    '건강식품: 천년초, 꾸지뽕, 와송, 콜라겐, 유산균, 흑마늘, 노니, 녹용, 효소, 환$',
-    '화훼·모종: 생화, 모종, 다육, 화초, 묘목, 꽃$, !꿀',
-  ].join('\n');
-
+  // 품목 사전(원재료·제품 형태)은 dictionary.js
   FM.DEFAULT_SETTINGS = {
-    wCat: 0.35, // 같은 품목군일 때 유사도
-    wTag: 0.65, // 공통 품목 키워드가 있을 때 유사도
-    radius: 2.3, // 자동 배치·점수 계산에 고려하는 거리(칸)
-    vScale: 1, // 세로(위·아래) 방향 거리 배율 (2 → 위아래 칸을 2칸 거리로 취급)
+    wRaw: 0.7, // 같은 원재료(결과물이 달라도)일 때 유사도
+    wForm: 0.35, // 같은 제품 형태(즙·청·떡·젓갈…)일 때 유사도
+    wCat: 0.2, // 같은 품목군일 때 유사도
+    radius: 6, // 자동 배치·검수에서 살피는 거리(칸) — 이 안에서 멀수록 좋게 계산
+    vScale: 1, // 세로(위·아래) 방향 거리 배율
     lineDist: 1.5, // 검수 선 거리 기준 (lineScope 가 tag/all 일 때)
-    lineScope: 'warn', // warn = 위험·주의만 / info = 참고까지 / tag = 공통 품목 모두 / all = 같은 품목군까지 모두
-    lineColorBy: 'group', // group = 품목별 색 / cluster = 묶음별 색
+    lineScope: 'warn', // warn = 위험·주의만 / info = 참고까지 / tag = 원재료·형태 공통 모두 / all = 같은 품목군까지 모두
+    lineColorBy: 'group', // group = 원재료·형태별 색 / cluster = 묶음별 색
     heatmap: true,
     liveLines: false, // 배치 화면에서도 검수 선 표시
     autoPin: true, // 수동 배치·교체 시 자동 고정
     zoom: 1, // ③ 배치·④ 검수 화면 배율
     zoomEdit: 0.6, // ② 칸 만들기 화면 배율 (작게 보여서 넓은 격자를 한눈에)
-    keywords: FM.DEFAULT_KEYWORDS,
+    rawDict: FM.DEFAULT_RAW_DICT,
+    formDict: FM.DEFAULT_FORM_DICT,
+    dictVersion: FM.DICT_VERSION,
   };
 
   // 검수 레벨 기준 (근접 위험도 = 유사도 × 거리 가중치)
-  FM.LEVELS = { danger: 0.6, warn: 0.3, info: 0.15 };
+  FM.LEVELS = { danger: 0.45, warn: 0.3, info: 0.15 }; // 같은 원재료가 대각선(0.7×0.71)이면 위험
   FM.LEVEL_LABEL = { danger: '위험', warn: '주의', info: '참고' };
 
   // ---------------------------------------------------------------------------
@@ -782,7 +966,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         isNew: '',
         place: '',
         memo: '',
-        tags: [],
+        tags: [], // 원재료
+        forms: [], // 제품 형태
         tagsManual: false,
         days: {},
       },
@@ -812,7 +997,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     st.version = FM.DATA_VERSION;
     st.venues = Array.isArray(st.venues) && st.venues.length ? st.venues : FM.createDefaultState().venues;
     st.events = Array.isArray(st.events) ? st.events : [];
+    const storedDictVersion = (st.settings || {}).dictVersion;
     st.settings = Object.assign(FM.clone(FM.DEFAULT_SETTINGS), st.settings || {});
+    let resetTags = false;
+    if (storedDictVersion !== FM.DICT_VERSION) {
+      // 이전 버전(품목군 + 단순 품목 그룹) → 원재료·형태 기준으로 전환
+      const keep = { vScale: st.settings.vScale };
+      Object.assign(st.settings, FM.clone(FM.DEFAULT_SETTINGS), keep, {
+        lineColorBy: st.settings.lineColorBy,
+        heatmap: st.settings.heatmap,
+        liveLines: st.settings.liveLines,
+        autoPin: st.settings.autoPin,
+        zoom: st.settings.zoom,
+        zoomEdit: st.settings.zoomEdit,
+      });
+      delete st.settings.keywords;
+      delete st.settings.wTag;
+      resetTags = true;
+    }
     st.meta = Object.assign({ exportId: null, loadedExportId: null, exportedAt: null, updatedAt: null }, st.meta || {});
     for (const v of st.venues) if (v.template === undefined) v.template = null;
     for (const ev of st.events) {
@@ -830,6 +1032,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         }
       }
       ev.farms = ev.farms.map((f) => FM.newFarm(f));
+      if (resetTags) for (const f of ev.farms) f.tagsManual = false;
       ev.days.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     }
     return st;
@@ -961,6 +1164,111 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   };
 
   // ---------------------------------------------------------------------------
+  // 부스 방향 (손님을 맞는 앞면이 향하는 쪽): u 위 · d 아래 · l 왼쪽 · r 오른쪽
+  //   cell.dir = 방향, cell.da = 1 이면 자동으로 정한 방향 (칸을 더 그리면 다시 계산)
+  // ---------------------------------------------------------------------------
+  FM.DIRS = ['u', 'd', 'l', 'r'];
+  FM.DIR_LABEL = { u: '위', d: '아래', l: '왼쪽', r: '오른쪽' };
+  FM.DIR_ARROW = { u: '▲', d: '▼', l: '◀', r: '▶' };
+  const DV = { u: [-1, 0], d: [1, 0], l: [0, -1], r: [0, 1] };
+
+  /**
+   * 부스 방향 자동 설정
+   *   한 줄로 이어진 부스는 줄과 수직 방향만 후보로 두고, 앞이 비어 있는 쪽을 고름.
+   *   통로 건너 다른 부스 줄이 있으면 그쪽(통로 쪽)을 우선, 막힌 쪽(부스·시설·격자 끝)은 피함.
+   * @param mode 'auto'(기본) = 직접 정한 방향은 두고 자동 방향만 다시 계산 / 'all' = 전부 다시
+   * @returns 바뀐 칸 수
+   */
+  FM.autoDirections = function (L, mode) {
+    const at = (r, c) => L.cells[FM.cellKey(r, c)];
+    const isB = (r, c) => {
+      const x = at(r, c);
+      return !!x && x.t === 'b';
+    };
+    const inGrid = (r, c) => r >= 0 && c >= 0 && r < L.rows && c < L.cols;
+    let changed = 0;
+    for (const [k, cell] of Object.entries(L.cells)) {
+      if (cell.t !== 'b') continue;
+      if (mode !== 'all' && cell.dir && !cell.da) continue;
+      const [r, c] = FM.parseKey(k);
+      const runH = isB(r, c - 1) || isB(r, c + 1);
+      const runV = isB(r - 1, c) || isB(r + 1, c);
+      const allowed = runH && !runV ? ['d', 'u'] : runV && !runH ? ['r', 'l'] : ['d', 'u', 'r', 'l'];
+      let best = null;
+      let bestScore = -Infinity;
+      for (const dir of allowed) {
+        const [fr, fc] = DV[dir];
+        const nr = r + fr;
+        const nc = c + fc;
+        let score;
+        if (!inGrid(nr, nc)) score = -3;
+        else if (isB(nr, nc)) score = -100;
+        else if (at(nr, nc)) score = -5; // 시설 칸
+        else {
+          score = 2;
+          for (let s2 = 2; s2 <= 6; s2++) {
+            const rr = r + fr * s2;
+            const cc = c + fc * s2;
+            if (!inGrid(rr, cc)) {
+              score = 1;
+              break;
+            }
+            if (isB(rr, cc)) {
+              score = 10 - s2; // 통로 건너 마주 보는 줄
+              break;
+            }
+            if (at(rr, cc)) break;
+          }
+        }
+        if (cell.dir === dir) score += 0.01;
+        if (score > bestScore) {
+          bestScore = score;
+          best = dir;
+        }
+      }
+      if (bestScore <= -100) {
+        // 사방이 부스로 막힌 칸 — 방향 없음(거리로만 판단)
+        if (cell.dir && cell.da) {
+          delete cell.dir;
+          delete cell.da;
+          changed++;
+        }
+        continue;
+      }
+      if (cell.dir !== best) changed++;
+      cell.dir = best;
+      cell.da = 1;
+    }
+    return changed;
+  };
+
+  /** 방향 일괄 지정: key 칸(그리고 whole 이면 같은 줄로 이어진 부스 전체)에 dir 지정. 지정한 칸 목록 반환 */
+  FM.setDirection = function (L, key, dir, whole) {
+    const cell = L.cells[key];
+    if (!cell || cell.t !== 'b') return [];
+    const keys = [key];
+    if (whole) {
+      // 위·아래를 정하면 가로줄 전체, 왼쪽·오른쪽을 정하면 세로줄 전체
+      const [r, c] = FM.parseKey(key);
+      const step = dir === 'u' || dir === 'd' ? [0, 1] : [1, 0];
+      for (const sgn of [-1, 1]) {
+        for (let i = 1; ; i++) {
+          const k2 = FM.cellKey(r + step[0] * i * sgn, c + step[1] * i * sgn);
+          const x = L.cells[k2];
+          if (!x || x.t !== 'b') break;
+          keys.push(k2);
+        }
+      }
+    }
+    for (const k2 of keys) {
+      if (dir) L.cells[k2].dir = dir;
+      else delete L.cells[k2].dir;
+      delete L.cells[k2].da;
+    }
+    return keys;
+  };
+
+  // ---------------------------------------------------------------------------
   // 칸 모양 프리셋: n개 부스를 가진 기본 형태를 생성
   // ---------------------------------------------------------------------------
   FM.generateShape = function (shape, n, lines) {
@@ -968,12 +1276,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const path = [];
     let rows, cols;
     if (shape === 'lines') {
-      // 마주보기 줄 배치: 줄 사이에 통로 1칸
+      // 마주보는 줄 배치: ↓줄 · 통로 · ↑줄 ↓줄(등 맞댐) · 통로 · ↑줄 …
       const L = Math.max(1, Math.min(8, lines || 2));
       const len = Math.ceil(n / L);
-      rows = L * 2 + 1;
+      let r = 1;
+      for (let i = 0; i < L; i++) {
+        if (i > 0) r += i % 2 === 1 ? 2 : 1;
+        for (let c = 0; c < len; c++) path.push([r, 1 + c, i % 2 === 0 ? 'd' : 'u']);
+      }
+      rows = r + 2;
       cols = len + 2;
-      for (let i = 0; i < L; i++) for (let c = 0; c < len; c++) path.push([1 + i * 2, 1 + c]);
     } else if (shape === 'u') {
       // ㄷ자: 위쪽 줄 → 왼쪽 세로 → 아래쪽 줄 (오른쪽이 열린 형태)
       const hgt = Math.max(3, Math.round(n / 4) + 1);
@@ -1004,10 +1316,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     // 위·왼쪽에 여유 2칸(입구·무대 표시용), 전체 격자는 기본 크기 이상으로 넉넉하게
     const OFF = 1;
     const cells = {};
-    path.slice(0, n).forEach(([r, c]) => (cells[FM.cellKey(r + OFF, c + OFF)] = { t: 'b' }));
+    path.slice(0, n).forEach(([r, c, dir]) => (cells[FM.cellKey(r + OFF, c + OFF)] = dir ? { t: 'b', dir, da: 1 } : { t: 'b' }));
     rows = Math.min(FM.GRID.max, Math.max(FM.GRID.rows, rows + OFF + FM.GRID.margin));
     cols = Math.min(FM.GRID.max, Math.max(FM.GRID.cols, cols + OFF + FM.GRID.margin));
-    return { rows, cols, cells };
+    const out = { rows, cols, cells };
+    if (shape !== 'lines') FM.autoDirections(out, 'all');
+    return out;
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = FM;
@@ -1018,19 +1332,25 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 /*
  * 품목 유사도 / 근접도 / 검수(인접 레벨) 계산
  *
- *  유사도 s(a,b) ∈ [0,1]
- *    = wCat × [같은 품목군] + wTag × [공통 품목 키워드 그룹 존재] (+0.1 × 추가 공통 그룹)
- *  거리 가중치 p(d) = 1 / d²  (d = 칸 단위 유클리드 거리, d ≤ radius 일 때만)
- *    바로 옆 1.0 · 대각선 0.5 · 한 칸 건너 0.25 · 나이트 이동 0.2
- *  근접 위험도 = s × p(d)  → 위험 ≥ 0.6, 주의 ≥ 0.3, 참고 ≥ 0.15
- *  배치 전체 비용 = Σ 근접 위험도  (자동 배치가 최소화하는 값과 동일)
+ *  ① 품목 분석: 신청품목 → 원재료 태그(사과·포도·참깨·꿀…) + 제품 형태 태그(즙·청·떡·젓갈…)
+ *  ② 유사도 s(a,b) ∈ [0,1]
+ *       = wRaw × 원재료가중치      (같은 원재료 — 결과물이 달라도)      + 0.1 × 추가로 겹치는 원재료
+ *       | wRaw × 계열가중치        (원재료는 달라도 같은 계열, 예: 블루베리·아로니아)
+ *       + wForm × 형태가중치       (같은 제품 형태, 예: 둘 다 즙·청)
+ *       + wCat                     (같은 품목군)
+ *  ③ 근접도 p(a,b)  — 부스 방향을 알면 방향까지 고려
+ *       기본: 1/d  (d = 칸 거리, radius 이내)  바로 옆 1 · 대각선 0.71 · 2칸 0.5 · 3칸 0.33 …
+ *       마주봄(통로 건너 정면): 1  · 대각선으로 마주봄: 0.75 · 두 칸 비껴 마주봄: 0.4
+ *       등 맞댐: 기본 × 0.4      · 같은 방향 앞뒤 줄: 기본 × 0.5
+ *  ④ 근접 위험도 = s × p  → 위험 ≥ 0.45 · 주의 ≥ 0.3 · 참고 ≥ 0.15
+ *     배치 전체 비용 = Σ 근접 위험도  (자동 배치가 최소화하는 값과 동일)
  */
 (function (root) {
   'use strict';
   const FM = (root.FM = root.FM || {});
   const Sim = (FM.Sim = {});
 
-  // ----------------------------------------------------------- 키워드 사전 ---
+  // ----------------------------------------------------------- 사전 해석 ---
   function parsePattern(kw) {
     kw = String(kw).replace(/\s+/g, '');
     if (!kw) return null;
@@ -1052,78 +1372,149 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         return tok.includes(p.t);
     }
   }
+  function parseKeywords(str) {
+    const inc = [];
+    const exc = [];
+    String(str)
+      .split(/[,，]/)
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .forEach((kw) => {
+        const neg = kw.startsWith('!');
+        const p = parsePattern(neg ? kw.slice(1) : kw);
+        if (p) (neg ? exc : inc).push(p);
+      });
+    return { inc, exc };
+  }
+  /** "이름(0.5)" → {name, weight} */
+  function nameWeight(s) {
+    const m = String(s).trim().match(/^(.*?)\(\s*(\d*\.?\d+)\s*\)$/);
+    return m ? { name: m[1].trim(), weight: Math.max(0, Math.min(1, +m[2])) } : { name: String(s).trim(), weight: 1 };
+  }
 
-  Sim.parseDictionary = function (text) {
+  /**
+   * 원재료 사전: 「계열 > 원재료(가중치): 키워드…」, 「@계열: 가중치」
+   * 형태 사전:   「형태(가중치): 키워드…」
+   */
+  Sim.parseDictionary = function (text, withFamily) {
     const groups = [];
+    const famWeight = {};
     String(text || '')
       .split(/\r?\n/)
       .forEach((line) => {
         const s = line.trim();
         if (!s || s.startsWith('#')) return;
+        const fm = s.match(/^@([^:：]+)[:：]\s*(\d*\.?\d+)/);
+        if (fm) {
+          famWeight[fm[1].trim()] = Math.max(0, Math.min(1, +fm[2]));
+          return;
+        }
         const m = s.match(/^([^:：]+)[:：](.*)$/);
         if (!m) return;
-        const name = m[1].trim();
-        const inc = [];
-        const exc = [];
-        m[2]
-          .split(/[,，]/)
-          .map((x) => x.trim())
-          .filter(Boolean)
-          .forEach((kw) => {
-            const neg = kw.startsWith('!');
-            const p = parsePattern(neg ? kw.slice(1) : kw);
-            if (p) (neg ? exc : inc).push(p);
-          });
-        if (name && inc.length) groups.push({ name, inc, exc });
+        let head = m[1];
+        let family = '';
+        if (withFamily && head.includes('>')) {
+          const parts = head.split('>');
+          family = parts[0].trim();
+          head = parts.slice(1).join('>');
+        }
+        const nw = nameWeight(head);
+        const kw = parseKeywords(m[2]);
+        if (nw.name && kw.inc.length) groups.push({ name: nw.name, weight: nw.weight, family, inc: kw.inc, exc: kw.exc });
       });
-    return groups;
+    return { groups, famWeight };
   };
 
-  let dictCache = { text: null, groups: [] };
-  Sim.groups = function (settings) {
-    const text = (settings && settings.keywords) || FM.DEFAULT_KEYWORDS;
-    if (dictCache.text !== text) dictCache = { text, groups: Sim.parseDictionary(text) };
-    return dictCache.groups;
+  let dictCache = { key: null, value: null };
+  Sim.dicts = function (st) {
+    const rawText = (st && st.rawDict) || FM.DEFAULT_RAW_DICT;
+    const formText = (st && st.formDict) || FM.DEFAULT_FORM_DICT;
+    const key = rawText + '\u0000' + formText;
+    if (dictCache.key !== key) {
+      const raw = Sim.parseDictionary(rawText, true);
+      const form = Sim.parseDictionary(formText, false);
+      const rawInfo = {};
+      for (const g of raw.groups) rawInfo[g.name] = { weight: g.weight, family: g.family };
+      const formInfo = {};
+      for (const g of form.groups) formInfo[g.name] = { weight: g.weight };
+      dictCache = { key, value: { raw, form, rawInfo, formInfo, famWeight: raw.famWeight } };
+    }
+    return dictCache.value;
   };
 
-  const STOP = new Set(['등', '외', '및', '류', '기타', '약간', '각종', '종', '세트', '수제', '국산', '유기농', '무농약']);
+  // ------------------------------------------------------------- 품목 분석 ---
+  const STOP = new Set(['등', '외', '및', '류', '기타', '약간', '각종', '종', '세트', '수제', '국산', '유기농', '무농약', '제철농산물', '선물세트']);
+  /** 신청품목 → 낱말 목록. 괄호 안 재료도 낱말로 포함 (예: 침출차(작두콩,여주) → 침출차, 작두콩, 여주) */
   Sim.tokenize = function (items) {
-    let t = String(items || '');
-    // 괄호 안(품종·구성 설명) 제거 — 중첩 대비 여러 번
-    for (let k = 0; k < 3; k++) t = t.replace(/\([^()]*\)|\[[^\[\]]*\]/g, ' ');
-    t = t.replace(/[()\[\]{}<>「」『』"'“”‘’]/g, ' ');
-    return t
+    return String(items || '')
+      .replace(/[()\[\]{}<>「」『』"'“”‘’]/g, ',')
       .split(/[,，、\/·ㆍ.;:+&|\n\r\t ]+/)
-      .map((x) => x.replace(/^[\d\-~]+/, '').replace(/\d+종$/, '').trim())
+      .map((x) =>
+        x
+          .replace(/^[\d\-~]+/, '')
+          .replace(/\d+(종|호|도|g|kg|ml|L)?$/i, '')
+          .replace(/(.{2,})등$/, '$1')
+          .trim()
+      )
       .filter((x) => x && !STOP.has(x));
   };
 
-  /** 신청품목 문자열 → 품목 그룹 이름 목록 */
-  Sim.extractTags = function (items, groupsOrSettings) {
-    const groups = Array.isArray(groupsOrSettings) ? groupsOrSettings : Sim.groups(groupsOrSettings);
-    const toks = Sim.tokenize(items);
+  function matchGroups(groups, toks) {
     const out = [];
     for (const g of groups) {
-      const hit = toks.some((tok) => g.inc.some((p) => matchPattern(p, tok)) && !g.exc.some((p) => matchPattern(p, tok)));
-      if (hit) out.push(g.name);
+      if (toks.some((tok) => g.inc.some((p) => matchPattern(p, tok)) && !g.exc.some((p) => matchPattern(p, tok)))) out.push(g.name);
     }
     return out;
+  }
+
+  /** 신청품목 → { raw: 원재료[], forms: 제품형태[] } */
+  Sim.extract = function (items, st) {
+    const D = Sim.dicts(st);
+    const toks = Sim.tokenize(items);
+    return { raw: matchGroups(D.raw.groups, toks), forms: matchGroups(D.form.groups, toks) };
   };
 
-  /** 수동 지정이 아닌 농가의 태그를 다시 계산 */
-  Sim.refreshTags = function (farms, settings, force) {
-    const groups = Sim.groups(settings);
-    for (const f of farms) if (force || !f.tagsManual) f.tags = Sim.extractTags(f.items, groups);
+  /** 수동 지정이 아닌 농가의 원재료·형태 태그를 다시 계산 */
+  Sim.refreshTags = function (farms, st, force) {
+    for (const f of farms) {
+      if (!force && f.tagsManual) continue;
+      const x = Sim.extract(f.items, st);
+      f.tags = x.raw;
+      f.forms = x.forms;
+    }
+  };
+  Sim.family = (name, st) => {
+    const info = Sim.dicts(st).rawInfo[name];
+    return info ? info.family : '';
   };
 
   // -------------------------------------------------------------- 유사도 ---
   Sim.pair = function (a, b, st) {
+    const D = Sim.dicts(st);
     const ca = FM.normCategory(a.category);
     const sameCat = !!ca && ca === FM.normCategory(b.category);
-    const tb = b.tags || [];
-    const shared = (a.tags || []).filter((t) => tb.includes(t));
-    const s = (sameCat ? st.wCat : 0) + (shared.length ? st.wTag + 0.1 * (shared.length - 1) : 0);
-    return { s: Math.min(1, s), sameCat, shared };
+    const ra = a.tags || [];
+    const rb = b.tags || [];
+    const sharedRaw = ra.filter((t) => rb.includes(t));
+    const fa = a.forms || [];
+    const fb = b.forms || [];
+    const sharedForms = fa.filter((t) => fb.includes(t));
+    const rw = (t) => (D.rawInfo[t] ? D.rawInfo[t].weight : 1);
+    const fw = (t) => (D.formInfo[t] ? D.formInfo[t].weight : 1);
+
+    let s = 0;
+    let sharedFam = [];
+    if (sharedRaw.length) {
+      s += st.wRaw * Math.max(...sharedRaw.map(rw)) + 0.1 * (sharedRaw.length - 1);
+    } else {
+      const famA = new Set(ra.map((t) => D.rawInfo[t] && D.rawInfo[t].family).filter((f) => f && D.famWeight[f] > 0));
+      sharedFam = [...new Set(rb.map((t) => D.rawInfo[t] && D.rawInfo[t].family).filter((f) => famA.has(f)))];
+      if (sharedFam.length) s += st.wRaw * Math.max(...sharedFam.map((f) => D.famWeight[f]));
+    }
+    if (sharedForms.length) s += st.wForm * Math.max(...sharedForms.map(fw)) + 0.05 * (sharedForms.length - 1);
+    if (sameCat) s += st.wCat;
+    const kind = sharedRaw.length ? 'raw' : sharedFam.length ? 'fam' : sharedForms.length ? 'form' : sameCat ? 'cat' : null;
+    return { s: Math.min(1, s), sameCat, sharedRaw, sharedFam, sharedForms, kind };
   };
 
   /** n개 농가 → (n+1)×(n+1) 유사도 행렬 (마지막 인덱스 n = 빈 자리) */
@@ -1140,30 +1531,87 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return { S, N1, n };
   };
 
-  Sim.dist = (r1, c1, r2, c2, vScale) => Math.hypot(c2 - c1, (r2 - r1) * (vScale || 1));
-  Sim.prox = (d, radius) => (d > 0 && d <= radius + 1e-9 ? 1 / (d * d) : 0);
+  // ------------------------------------------------------- 거리·방향 근접도 ---
+  // 부스 방향 = 손님을 맞는 앞면이 향하는 쪽 (u 위 · d 아래 · l 왼쪽 · r 오른쪽)
+  Sim.DIRV = { u: [-1, 0], d: [1, 0], l: [0, -1], r: [0, 1] };
+  const FACE_LAT = [1, 0.75, 0.4]; // 정면 · 한 칸 비껴 · 두 칸 비껴
+  const FACE_MAX = 6; // 이 칸 수 이내로 마주 보면 마주봄으로 판단
+
+  /**
+   * 두 칸(a, b: {r, c, dir})의 관계와 근접도
+   * @returns {{p, d, rel, label}}  rel: side | face | faceDiag | back | stack | near
+   */
+  Sim.relation = function (a, b, st) {
+    const dr = b.r - a.r;
+    const dc = b.c - a.c;
+    const vs = st.vScale || 1;
+    const d = Math.hypot(dc, dr * vs);
+    const R = st.radius || 6;
+    let p = d > 0 && d <= R + 1e-9 ? 1 / d : 0;
+    let rel = 'near';
+    const fa = a.dir && Sim.DIRV[a.dir];
+    const fb = b.dir && Sim.DIRV[b.dir];
+    if (fa && fb) {
+      const t = dr * fa[0] + dc * fa[1]; // a 앞쪽으로 떨어진 칸 수
+      const m = Math.abs(dr * fa[1] - dc * fa[0]); // 옆으로 비껴난 칸 수
+      const opposite = fa[0] === -fb[0] && fa[1] === -fb[1];
+      const same = fa[0] === fb[0] && fa[1] === fb[1];
+      if (opposite && t >= 1 && t <= FACE_MAX && m <= 2) {
+        const face = FACE_LAT[m] * (t <= 4 ? 1 : 0.6);
+        if (face >= p) {
+          p = face;
+          rel = m === 0 ? 'face' : 'faceDiag';
+        }
+      } else if (opposite && t <= -1) {
+        p *= 0.4;
+        rel = 'back';
+      } else if (same && t !== 0 && m <= 1) {
+        p *= 0.5;
+        rel = 'stack';
+      } else if (same && t === 0) rel = 'side';
+    }
+    return { p, d, rel, label: Sim.relLabel(rel, dr, dc, a.dir) };
+  };
+
+  Sim.relLabel = function (rel, dr, dc, dirA) {
+    const ar = Math.abs(dr);
+    const ac = Math.abs(dc);
+    if (rel === 'face' || rel === 'faceDiag') {
+      const fa = Sim.DIRV[dirA];
+      const t = Math.abs(dr * fa[0] + dc * fa[1]);
+      const gap = t - 1;
+      return (rel === 'face' ? '마주봄' : '비껴서 마주봄') + (gap > 0 ? ` (통로 ${gap}칸 건너)` : ' (정면으로 붙음)');
+    }
+    if (rel === 'back') return '등 맞댐';
+    if (ar + ac === 1) return '바로 옆';
+    if (ar === 1 && ac === 1) return '대각선';
+    if ((ar === 2 && ac === 0) || (ar === 0 && ac === 2)) return '한 칸 건너';
+    if (rel === 'stack') return '앞뒤 줄';
+    return `${Math.round(Math.hypot(ar, ac) * 10) / 10}칸 거리`;
+  };
+
   Sim.level = (sev) => (sev >= FM.LEVELS.danger ? 'danger' : sev >= FM.LEVELS.warn ? 'warn' : sev >= FM.LEVELS.info ? 'info' : null);
-  Sim.distLabel = function (dr, dc) {
-    dr = Math.abs(dr);
-    dc = Math.abs(dc);
-    if (dr + dc === 1) return '바로 옆';
-    if (dr === 1 && dc === 1) return '대각선';
-    if ((dr === 2 && dc === 0) || (dr === 0 && dc === 2)) return '한 칸 건너';
-    if ((dr === 1 && dc === 2) || (dr === 2 && dc === 1)) return '한 칸 건너 대각선';
-    return `가로 ${dc}칸·세로 ${dr}칸`;
+
+  /** 배치(layout) → 부스 칸 목록 {key, r, c, dir} */
+  Sim.boothCells = function (L, keys) {
+    return (keys || Object.keys(L.cells).filter((k) => L.cells[k].t === 'b')).map((k) => {
+      const [r, c] = FM.parseKey(k);
+      return { key: k, r, c, dir: L.cells[k] && L.cells[k].dir };
+    });
   };
 
   // ------------------------------------------------------------------ 검수 ---
+  const RANK = { info: 1, warn: 2, danger: 3 };
   /**
    * 검수 선을 그릴지
    *   warn(기본) = 위험·주의 쌍만 · info = 참고까지
-   *   tag = 기준 거리 안의 공통 품목 쌍 모두 · all = 같은 품목군까지 모두
+   *   tag = 기준 거리 안의 원재료·형태 공통 쌍 모두 · all = 같은 품목군까지 모두
    */
-  const RANK = { info: 1, warn: 2, danger: 3 };
-  Sim.wantsLine = function (p, d, st) {
+  Sim.wantsLine = function (p, rel, st) {
     const scope = st.lineScope || 'warn';
     if (scope === 'warn' || scope === 'info') return !!p.level && RANK[p.level] >= RANK[scope];
-    return d <= st.lineDist + 1e-9 && (scope === 'all' || p.kind === 'tag');
+    const near = rel.d <= st.lineDist + 1e-9 || rel.rel === 'face' || rel.rel === 'faceDiag';
+    return near && (scope === 'all' || p.kind !== 'cat');
   };
 
   Sim.grade = function (counts, n) {
@@ -1177,9 +1625,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return { g: 'E', label: '나쁨' };
   };
 
+  const KIND_LABEL = { raw: '같은 원재료', fam: '같은 계열', form: '같은 형태', cat: '같은 품목군' };
+  Sim.KIND_LABEL = KIND_LABEL;
+
   /**
    * 배치 검수
-   * @returns {{pairs, lines, cellScore, total, counts, grade, score, baseline, placed}}
+   * @returns {{pairs, lines, legend, cellScore, total, counts, grade, score, baseline, placed, rawStats}}
    */
   Sim.inspect = function (L, farmById, st) {
     const placed = [];
@@ -1188,38 +1639,45 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const f = farmById[fid];
       if (!f || !cell || cell.t !== 'b') continue;
       const [r, c] = FM.parseKey(key);
-      placed.push({ key, r, c, farm: f });
+      placed.push({ key, r, c, dir: cell.dir, farm: f });
     }
-    const vScale = st.vScale || 1;
-    const maxR = Math.max(st.radius, st.lineDist);
     const pairs = [];
     const lines = [];
     const cellScore = {};
     const counts = { danger: 0, warn: 0, info: 0 };
+    const rawDists = [];
     let total = 0;
     for (let i = 0; i < placed.length; i++) {
       const a = placed[i];
       for (let j = i + 1; j < placed.length; j++) {
         const b = placed[j];
-        const d = Sim.dist(a.r, a.c, b.r, b.c, vScale);
-        if (d > maxR + 1e-9) continue;
         const sim = Sim.pair(a.farm, b.farm, st);
         if (sim.s <= 0) continue;
-        const sev = sim.s * Sim.prox(d, st.radius);
-        const kind = sim.shared.length ? 'tag' : 'cat';
+        const rel = Sim.relation(a, b, st);
+        // 흔한 재료(쌀·소금 등 가중치 < 1)만 겹치는 쌍은 거리 통계에서 뺌
+        if (sim.sharedRaw.some((t) => !Sim.dicts(st).rawInfo[t] || Sim.dicts(st).rawInfo[t].weight >= 1))
+          rawDists.push({ d: (rel.rel === 'face' || rel.rel === 'faceDiag') && rel.p >= 0.75 ? 1 : rel.d, a, b, rel });
+        const sev = sim.s * rel.p;
+        const groupKey =
+          sim.kind === 'raw' ? 'raw:' + sim.sharedRaw[0] : sim.kind === 'fam' ? 'fam:' + sim.sharedFam[0] : sim.kind === 'form' ? 'form:' + sim.sharedForms[0] : 'cat:' + FM.normCategory(a.farm.category);
+        const groupLabel =
+          sim.kind === 'raw' ? sim.sharedRaw.join(', ') : sim.kind === 'fam' ? sim.sharedFam.join(', ') + ' 계열' : sim.kind === 'form' ? sim.sharedForms.join(', ') : FM.normCategory(a.farm.category);
         const p = {
           a,
           b,
-          d,
+          d: rel.d,
+          rel: rel.rel,
+          distLabel: rel.label,
           s: sim.s,
           sev,
-          shared: sim.shared,
+          sharedRaw: sim.sharedRaw,
+          sharedFam: sim.sharedFam,
+          sharedForms: sim.sharedForms,
           sameCat: sim.sameCat,
-          kind,
+          kind: sim.kind,
           level: Sim.level(sev),
-          groupKey: kind === 'tag' ? 'tag:' + sim.shared[0] : 'cat:' + FM.normCategory(a.farm.category),
-          groupLabel: kind === 'tag' ? sim.shared.join(', ') : FM.normCategory(a.farm.category),
-          distLabel: Sim.distLabel(a.r - b.r, a.c - b.c),
+          groupKey,
+          groupLabel,
         };
         if (sev > 0) {
           total += sev;
@@ -1230,13 +1688,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           counts[p.level]++;
           pairs.push(p);
         }
-        if (Sim.wantsLine(p, d, st)) lines.push(p);
+        if (Sim.wantsLine(p, rel, st)) lines.push(p);
       }
     }
     pairs.sort((x, y) => y.sev - x.sev);
 
-    // 선 색상: 품목 그룹별 또는 연결 묶음(클러스터)별
-    const colorOf = {};
+    // 선 색상: 원재료·형태별 또는 연결 묶음(클러스터)별
     const legend = [];
     if (st.lineColorBy === 'cluster') {
       const parent = {};
@@ -1245,58 +1702,50 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const compColor = {};
       let ci = 0;
       for (const p of lines) {
-        const root2 = find(p.a.key);
-        if (!(root2 in compColor)) {
-          compColor[root2] = FM.LINE_PALETTE[ci++ % FM.LINE_PALETTE.length];
-          legend.push({ key: root2, label: '묶음 ' + ci, color: compColor[root2], count: 0 });
+        const r2 = find(p.a.key);
+        if (!(r2 in compColor)) {
+          compColor[r2] = FM.LINE_PALETTE[ci++ % FM.LINE_PALETTE.length];
+          legend.push({ key: r2, label: '묶음 ' + ci, color: compColor[r2], count: 0 });
         }
-        p.color = compColor[root2];
-        legend.find((l) => l.key === root2).count++;
+        p.color = compColor[r2];
+        legend.find((l) => l.key === r2).count++;
       }
     } else {
+      const colorOf = {};
       let ci = 0;
-      const sortedKeys = [...new Set(lines.map((p) => p.groupKey))];
-      for (const gk of sortedKeys) {
+      for (const gk of [...new Set(lines.map((p) => p.groupKey))]) {
         colorOf[gk] = FM.LINE_PALETTE[ci++ % FM.LINE_PALETTE.length];
         const sample = lines.find((p) => p.groupKey === gk);
-        legend.push({
-          key: gk,
-          label: (sample.kind === 'tag' ? '공통 품목 · ' : '같은 품목군 · ') + sample.groupLabel,
-          color: colorOf[gk],
-          count: lines.filter((p) => p.groupKey === gk).length,
-          kind: sample.kind,
-        });
+        legend.push({ key: gk, label: KIND_LABEL[sample.kind] + ' · ' + sample.groupLabel, color: colorOf[gk], count: lines.filter((p) => p.groupKey === gk).length, kind: sample.kind });
       }
       for (const p of lines) p.color = colorOf[p.groupKey];
     }
 
+    // 같은 원재료 농가끼리 얼마나 떨어졌는지
+    rawDists.sort((x, y) => x.d - y.d);
+    const rawStats = rawDists.length
+      ? {
+          pairs: rawDists.length,
+          min: rawDists[0].d,
+          minPair: rawDists[0],
+          avg: rawDists.reduce((s, x) => s + x.d, 0) / rawDists.length,
+          within2: rawDists.filter((x) => x.d <= 2.01).length,
+          facing: rawDists.filter((x) => (x.rel.rel === 'face' || x.rel.rel === 'faceDiag') && x.rel.p >= 0.75).length,
+        }
+      : null;
+
     const baseline = Sim.randomBaseline(L, placed, st);
     const score = baseline > 1e-9 ? Math.max(0, Math.min(100, Math.round(100 * (1 - total / baseline)))) : 100;
-    return {
-      pairs,
-      lines,
-      legend,
-      cellScore,
-      total,
-      counts,
-      grade: Sim.grade(counts, placed.length),
-      score,
-      baseline,
-      placed: placed.length,
-    };
+    return { pairs, lines, legend, cellScore, total, counts, grade: Sim.grade(counts, placed.length), score, baseline, placed: placed.length, rawStats };
   };
 
   /** 같은 농가들을 같은 부스 칸에 무작위로 놓았을 때의 평균 비용 (점수 기준선) */
   Sim.randomBaseline = function (L, placed, st) {
     if (placed.length < 2 || !FM.Opt) return 0;
-    const keys = Object.keys(L.cells).filter((k) => L.cells[k].t === 'b');
-    const cells = keys.map((k) => {
-      const [r, c] = FM.parseKey(k);
-      return { r, c };
-    });
+    const cells = Sim.boothCells(L);
     const farms = placed.map((p) => p.farm);
     const { S, N1, n } = Sim.matrix(farms, st);
-    const nb = FM.Opt.buildNeighbors(cells, st.radius, st.vScale || 1);
+    const nb = FM.Opt.buildNeighbors(cells, st);
     const rng = FM.mulberry32(12345);
     const A = new Int32Array(cells.length);
     const trials = 24;
@@ -1340,51 +1789,76 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const FM = (root.FM = root.FM || {});
   const Opt = (FM.Opt = {});
 
-  /** 각 칸에서 radius 이내의 이웃 칸과 거리 가중치 (CSR 형식) */
-  Opt.buildNeighbors = function (cells, radius, vScale) {
+  /**
+   * 각 칸의 이웃 칸과 근접도 가중치 (CSR 형식)
+   * cells: [{r, c, dir}] — 가중치는 검수와 같은 FM.Sim.relation (거리 1/d + 마주봄·등맞댐 보정)
+   */
+  Opt.buildNeighbors = function (cells, st) {
     const K = cells.length;
+    const lists = Array.from({ length: K }, () => []);
+    for (let i = 0; i < K; i++)
+      for (let j = i + 1; j < K; j++) {
+        const p = FM.Sim.relation(cells[i], cells[j], st).p;
+        if (p <= 0) continue;
+        lists[i].push(j, p);
+        lists[j].push(i, p);
+      }
     const off = new Int32Array(K + 1);
-    const idx = [];
-    const w = [];
-    const R = radius + 1e-9;
+    let n = 0;
     for (let i = 0; i < K; i++) {
-      off[i] = idx.length;
-      const a = cells[i];
-      for (let j = 0; j < K; j++) {
-        if (i === j) continue;
-        const b = cells[j];
-        const dx = b.c - a.c;
-        const dy = (b.r - a.r) * vScale;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > R * R) continue;
-        idx.push(j);
-        w.push(1 / d2);
+      off[i] = n;
+      n += lists[i].length / 2;
+    }
+    off[K] = n;
+    const idx = new Int32Array(n);
+    const w = new Float32Array(n);
+    for (let i = 0; i < K; i++) {
+      let o = off[i];
+      for (let x = 0; x < lists[i].length; x += 2, o++) {
+        idx[o] = lists[i][x];
+        w[o] = lists[i][x + 1];
       }
     }
-    off[K] = idx.length;
-    return { off, idx: Int32Array.from(idx), w: Float32Array.from(w), K };
+    return { off, idx, w, K };
   };
 
-  Opt.totalCost = function (A, nb, S, N1) {
+  /**
+   * 쌍별 벌점 G(x), x = 유사도 × 근접도(= 근접 위험도)
+   *   가까운 충돌일수록 훨씬 크게: 위험·주의 구간(FM.LEVELS)에 추가 벌점을 줘서
+   *   「먼 곳 여러 쌍을 조금 줄이는 대신 한 쌍을 붙여 버리는」 해를 피함
+   */
+  const G = (x) => {
+    const W = FM.LEVELS.warn;
+    const D = FM.LEVELS.danger;
+    return x + (x > W ? 4 * (x - W) : 0) + (x > D ? 8 * (x - D) : 0);
+  };
+  Opt.penalty = G;
+  Opt.SHAPE = 'level';
+
+  Opt.totalCost = function (A, nb, S, N1, shaped) {
     let c = 0;
     const { off, idx, w } = nb;
     for (let i = 0; i < A.length; i++) {
       const row = A[i] * N1;
-      for (let k = off[i]; k < off[i + 1]; k++) c += w[k] * S[row + A[idx[k]]];
+      for (let k = off[i]; k < off[i + 1]; k++) {
+        const x = w[k] * S[row + A[idx[k]]];
+        c += shaped ? G(x) : x;
+      }
     }
     return c / 2;
   };
 
   /**
    * @param {object} p
-   *   cells: [{r,c}]            부스 칸 목록 (K)
+   *   cells: [{r,c,dir}]        부스 칸 목록 (K)
    *   S, N1                     유사도 행렬 (N1 = 농가수 + 1, 마지막 = 빈 자리)
    *   initial: Int32Array(K)    현재 배치 (농가 인덱스, 비었으면 -1)
    *   fixed:   Uint8Array(K)    1 = 움직이지 않는 칸
    *   toPlace: number[]         새로 배치할 농가 인덱스 (우선순위 순)
    *   fresh:   boolean          true = 고정되지 않은 칸을 비우고 처음부터 재배치
    *   anchorPenalty: number     자리 이동 1건당 벌점 (0 = 자유 재배치)
-   *   radius, vScale, seed, restarts, iterations
+   *   st                        설정 (radius, vScale — 근접도 계산용)
+   *   seed, restarts, iterations
    * @returns {{assign: Int32Array, cost: number, unplaced: number[], moved: number}}
    */
   Opt.optimize = function (p) {
@@ -1393,7 +1867,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const N1 = p.N1;
     const E = N1 - 1;
     const S = p.S;
-    const nb = Opt.buildNeighbors(cells, p.radius, p.vScale || 1);
+    const nb = Opt.buildNeighbors(cells, p.st);
     const rng = FM.mulberry32(p.seed == null ? Date.now() : p.seed);
     const lam = p.anchorPenalty || 0;
 
@@ -1440,13 +1914,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const n = idx[k];
         if (n === j) continue;
         const g = A[n];
-        d += w[k] * (S[rj + g] - S[ri + g]);
+        d += G(w[k] * S[rj + g]) - G(w[k] * S[ri + g]);
       }
       for (let k = off[j]; k < off[j + 1]; k++) {
         const n = idx[k];
         if (n === i) continue;
         const g = A[n];
-        d += w[k] * (S[ri + g] - S[rj + g]);
+        d += G(w[k] * S[ri + g]) - G(w[k] * S[rj + g]);
       }
       if (anchor) {
         const oi = anchor[i];
@@ -1461,7 +1935,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     function localCost(A, i, f) {
       let c = 0;
       const row = f * N1;
-      for (let k = off[i]; k < off[i + 1]; k++) c += w[k] * S[row + A[idx[k]]];
+      for (let k = off[i]; k < off[i + 1]; k++) c += G(w[k] * S[row + A[idx[k]]]);
       return c;
     }
 
@@ -1550,7 +2024,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
 
     function fullCost(A) {
-      let c = Opt.totalCost(A, nb, S, N1);
+      let c = Opt.totalCost(A, nb, S, N1, true);
       if (anchor) for (let i = 0; i < K; i++) if (A[i] !== E && A[i] !== anchor[i]) c += lam;
       return c;
     }
@@ -1992,21 +2466,30 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           }
           const f = farmById[L.assign[k]];
           const pin = f && L.pins[f.id] ? ' 📌' : '';
+          const arrow = cell.dir ? ' ' + FM.DIR_ARROW[cell.dir] : '';
+          if (cell.dir) {
+            // 앞면(손님 쪽)을 굵은 선으로
+            const side = { u: 'top', d: 'bottom', l: 'left', r: 'right' }[cell.dir];
+            xc.border = Object.assign({}, BORDER, { [side]: { style: 'thick', color: { argb: 'FF2F7D4F' } } });
+          }
           if (f) {
             xc.value = {
               richText: [
-                { text: nums[k] + pin + '\n', font: { size: 8, color: { argb: 'FF666666' } } },
+                { text: nums[k] + arrow + pin + '\n', font: { size: 8, color: { argb: 'FF666666' } } },
                 { text: FM.shortName(f.name), font: { bold: true, size: 10 } },
                 { text: '\n' + (f.category || ''), font: { size: 7, color: { argb: 'FF666666' } } },
               ],
             };
             xc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb(FM.catColor(f.category).bgHex) } };
           } else {
-            xc.value = { richText: [{ text: nums[k] + '\n', font: { size: 8, color: { argb: 'FF999999' } } }, { text: '빈 자리', font: { size: 9, color: { argb: 'FFAAAAAA' } } }] };
+            xc.value = { richText: [{ text: nums[k] + arrow + '\n', font: { size: 8, color: { argb: 'FF999999' } } }, { text: '빈 자리', font: { size: 9, color: { argb: 'FFAAAAAA' } } }] };
           }
         }
         // 범례
         let lr = R0 + (b.maxR - b.minR) + 2;
+        ws.getCell(lr - 1, 2).value = '▲▼◀▶ · 굵은 초록 테두리 = 부스 앞면(손님 쪽)';
+        ws.getCell(lr - 1, 2).font = { size: 9, color: { argb: 'FF2F7D4F' } };
+        lr += 1;
         ws.getCell(lr, 2).value = '품목군 범례';
         ws.getCell(lr, 2).font = { bold: true };
         const cats = {};
@@ -2068,11 +2551,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       { header: '장소', key: 'place', width: 8 },
     ];
     ev.days.forEach((d, i) => cols.push({ header: FM.weekday(d.date) + ' ' + FM.fmtDay(d.date).replace(/\(.\)$/, ''), key: 'd' + i, width: 12 }));
-    cols.push({ header: '유사 품목 태그', key: 'tags', width: 30 }, { header: '비고', key: 'memo', width: 20 });
+    cols.push({ header: '원재료', key: 'tags', width: 30 }, { header: '제품 형태', key: 'forms', width: 24 }, { header: '비고', key: 'memo', width: 20 });
     rs.columns = cols;
     const numsByDay = inspections.map((x) => ({ map: FM.farmCellMap(x.day.layout), nums: x.nums }));
     ev.farms.forEach((f, idx) => {
-      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, tags: (f.tags || []).join(', '), memo: f.memo };
+      const row = { no: f.no || idx + 1, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, tags: (f.tags || []).join(', '), forms: (f.forms || []).join(', '), memo: f.memo };
       ev.days.forEach((d, i) => {
         if (!f.days[d.id]) return (row['d' + i] = '');
         const k = numsByDay[i].map[f.id];
@@ -2121,7 +2604,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
   X.reasonText = function (p) {
     const parts = [];
-    if (p.shared.length) parts.push('공통 품목: ' + p.shared.join(', '));
+    if (p.sharedRaw && p.sharedRaw.length) parts.push('같은 원재료: ' + p.sharedRaw.join(', '));
+    else if (p.sharedFam && p.sharedFam.length) parts.push('같은 계열: ' + p.sharedFam.join(', '));
+    if (p.sharedForms && p.sharedForms.length) parts.push('같은 형태: ' + p.sharedForms.join(', '));
     if (p.sameCat) parts.push('같은 품목군: ' + FM.normCategory(p.a.farm.category));
     return parts.join(' / ');
   };
@@ -2184,7 +2669,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     g.fillText(`${venue.name} ${ev.title} — ${day.round ? day.round + ' ' : ''}${FM.fmtDay(day.date)} 배치도`, PAD, PAD - 6);
     g.font = font(400, 13);
     g.fillStyle = '#555';
-    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn}`, PAD, PAD + 26);
+    g.fillText(`농부의시장 · 배치 ${insp.placed}곳 · 검수 ${insp.grade.g}등급(${insp.grade.label}) · 분산 점수 ${insp.score}점 · 위험 ${insp.counts.danger} / 주의 ${insp.counts.warn} · 초록 막대 = 부스 앞면(손님 쪽)`, PAD, PAD + 26);
     const ox = PAD + (W - PAD * 2 - gridW) / 2;
     const oy = HEAD + PAD - 10;
     const pos = (r, c) => ({ x: ox + (c - b.minC) * (CW + GAP), y: oy + (r - b.minR) * (CH + GAP) });
@@ -2234,6 +2719,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (!f) g.setLineDash([4, 3]);
       g.stroke();
       g.setLineDash([]);
+      if (cell.dir) {
+        // 앞면(손님 쪽) 표시 막대
+        g.fillStyle = '#2f7d4f';
+        const T = 5;
+        if (cell.dir === 'u') g.fillRect(x + 10, y, CW - 20, T);
+        else if (cell.dir === 'd') g.fillRect(x + 10, y + CH - T, CW - 20, T);
+        else if (cell.dir === 'l') g.fillRect(x, y + 10, T, CH - 20);
+        else g.fillRect(x + CW - T, y + 10, T, CH - 20);
+      }
       texts.push(() => {
         const halo = (txt, tx, ty) => {
           g.lineWidth = 3;
@@ -2269,7 +2763,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         g.strokeStyle = p.color;
         g.globalAlpha = 0.85;
         g.lineWidth = 2 + 4 * Math.min(1, p.sev);
-        g.setLineDash(p.kind === 'cat' ? [6, 4] : []);
+        g.setLineDash(p.kind === 'form' ? [9, 5] : p.kind === 'cat' ? [2, 6] : []);
         g.beginPath();
         g.moveTo(a.x + CW / 2, a.y + CH / 2);
         g.lineTo(bb.x + CW / 2, bb.y + CH / 2);
@@ -2311,7 +2805,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         const yy = ly + 20 + Math.floor(i / 3) * 24;
         g.strokeStyle = l.color;
         g.lineWidth = 3;
-        g.setLineDash(l.kind === 'cat' ? [6, 4] : []);
+        g.setLineDash(l.kind === 'form' ? [9, 5] : l.kind === 'cat' ? [2, 6] : []);
         g.beginPath();
         g.moveTo(lx, yy + 7);
         g.lineTo(lx + 22, yy + 7);
@@ -2422,9 +2916,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const mode = ui().mode;
 
     const MODE_INFO = {
-      edit: ['② 칸 만들기', '격자를 클릭하거나 드래그해서 부스 칸을 만드세요. 한 칸 = 농가 한 곳.'],
+      edit: ['② 칸 만들기', '격자를 클릭·드래그해서 부스 칸을 만드세요(한 칸 = 농가 한 곳). 부스 앞면 방향(▲▼◀▶)은 자동으로 정해지고 「➜ 방향」 붓으로 줄 단위로 바꿀 수 있어요.'],
       assign: ['③ 농가 배치', '「⚡ 자동 배치」 후, 칸을 끌어 옮기거나 목록에서 농가를 골라 원하는 칸에 놓으세요.'],
-      inspect: ['④ 검수', '비슷한 품목이 가까이 붙은 곳을 선으로 이어 보여줘요. 손으로 바꾼 뒤 꼭 확인하세요.'],
+      inspect: ['④ 검수', '원재료·형태가 겹치는 농가가 가깝거나 서로 마주 보는 곳을 선으로 이어 보여줘요. 손으로 바꾼 뒤 꼭 확인하세요.'],
     }[mode];
 
     const top = h(
@@ -2447,6 +2941,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       h(
         'div',
         { class: 'lv-tools' },
+        h('button', { class: 'btn small', title: '지금 날짜의 배치도를 그림(PNG) 파일로 저장해요', onclick: () => savePng() }, '🖼 그림 저장'),
         h('button', { class: 'btn small', title: '되돌리기 (Ctrl+Z)', onclick: undo }, '↶ 되돌리기'),
         h('button', { class: 'btn small', title: '다시 하기 (Ctrl+Y)', onclick: redo }, '↷'),
         h(
@@ -2474,6 +2969,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     });
     refresh();
   };
+
+  function baseName() {
+    return UI.safeFileName(`농부의시장_${App().venue(C.ev.venueId).short}_${C.ev.title}`);
+  }
+  function savePng(withLines) {
+    const lines = withLines == null ? ui().mode === 'inspect' || (ui().mode === 'assign' && ST().liveLines) : withLines;
+    App().exportPng(C.ev, C.day, baseName(), lines);
+    UI.toast('배치도 그림을 저장했어요' + (lines ? ' (검수 선 포함)' : '') + '. 다운로드 폴더를 확인하세요.', 'ok');
+  }
 
   function setZoom(d) {
     ST()[zoomKey()] = Math.max(0.35, Math.min(1.6, Math.round((zoom() + d) * 100) / 100));
@@ -2538,6 +3042,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       el.appendChild(h('div', { class: 'counter-msg ' + (rem > 0 ? 'need' : rem === 0 ? 'ok' : 'over') }, rem > 0 ? `부스 칸을 ${rem}개 더 만들면 딱 맞아요` : rem === 0 ? '✓ 참여 농가 수와 부스 칸 수가 딱 맞아요!' : `칸이 ${-rem}개 남아요 (빈 자리가 생겨요)`));
       const pct = N ? Math.min(100, Math.round((K / N) * 100)) : 0;
       el.appendChild(h('div', { class: 'progress' }, h('div', { class: 'bar ' + (rem < 0 ? 'over' : rem === 0 ? 'ok' : ''), style: { width: pct + '%' } })));
+      const noDir = Object.values(LY().cells).filter((c) => c.t === 'b' && !c.dir).length;
+      if (K && noDir)
+        el.appendChild(
+          h(
+            'button',
+            {
+              class: 'stat over',
+              title: '사방이 막혀 앞면을 정할 수 없는 부스예요. 「➜ 방향」 붓으로 정해 주세요. (방향이 없으면 거리로만 판단해요)',
+              onclick: () => {
+                ui().brush = 'd';
+                renderSide();
+              },
+            },
+            h('small', null, '방향 없는 부스'),
+            h('b', null, noDir + '칸')
+          )
+        );
     } else {
       el.appendChild(stat('배치됨', P + '곳', P === N && N ? 'ok' : ''));
       const un = N - P;
@@ -2559,6 +3080,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       );
       if (K < N) el.appendChild(h('div', { class: 'counter-msg need' }, `⚠ 부스 칸이 ${N - K}개 부족해요 → ② 칸 만들기에서 늘려 주세요`));
       else if (K > N) el.appendChild(h('div', { class: 'counter-msg over' }, `빈 자리 ${K - P}칸`));
+      if (N > 0 && P === N)
+        el.appendChild(
+          h(
+            'div',
+            { class: 'done-banner' },
+            h('b', null, '🎉 배치 완료!'),
+            h('button', { class: 'btn small primary', onclick: () => savePng(false) }, '🖼 그림 저장'),
+            h('button', { class: 'btn small', onclick: () => savePng(true) }, '🖼 검수 선 넣어 저장'),
+            h('button', { class: 'btn small', onclick: () => App().exportExcel(C.ev, baseName()) }, '📊 엑셀 저장'),
+            h('button', { class: 'btn small ghost', onclick: () => App().printDay(C.ev, C.day) }, '🖨 인쇄')
+          )
+        );
     }
     el.appendChild(h('div', { class: 'spacer' }));
     if (P > 0) {
@@ -2669,7 +3202,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (u.swapFrom === key) cls += ' swap-src';
     if (C.hl && (C.hl.a === key || C.hl.b === key)) cls += ' hl';
     if (q) {
-      const hit = f && [f.name, f.owner, f.items, f.category, (f.tags || []).join(' ')].join(' ').toLowerCase().includes(q);
+      const hit = f && [f.name, f.owner, f.items, f.category, (f.tags || []).join(' '), (f.forms || []).join(' ')].join(' ').toLowerCase().includes(q);
       cls += hit ? ' match' : ' dim';
     }
     if (f) {
@@ -2682,10 +3215,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const lv = C.cellLevel[key];
       if (lv) cls += ' heat-' + lv;
     }
-    const title = f ? `${C.nums[key]}번 · ${f.name}\n${f.category} · ${f.items}\n태그: ${(f.tags || []).join(', ') || '없음'}${L.pins[f.id] ? '\n📌 고정됨' : ''}` : `${C.nums[key]}번 · 빈 자리`;
+    if (cell.dir) cls += ' f-' + cell.dir;
+    const dirText = cell.dir ? `\n앞면: ${FM.DIR_LABEL[cell.dir]}쪽${cell.da ? ' (자동)' : ''}` : '';
+    const title = f
+      ? `${C.nums[key]}번 · ${f.name}\n${f.category} · ${f.items}\n원재료: ${(f.tags || []).join(', ') || '없음'}\n형태: ${(f.forms || []).join(', ') || '없음'}${L.pins[f.id] ? '\n📌 고정됨' : ''}${dirText}`
+      : `${C.nums[key]}번 · 빈 자리${dirText}`;
     return h(
       'div',
       { class: cls, 'data-k': key, style, title },
+      cell.dir ? h('span', { class: 'cdir d-' + cell.dir + (cell.da ? '' : ' manual') }, FM.DIR_ARROW[cell.dir]) : null,
       h('span', { class: 'cno' }, C.nums[key]),
       f && L.pins[f.id] ? h('span', { class: 'cpin' }, '📌') : null,
       f ? h('div', { class: 'cname' }, FM.shortName(f.name)) : h('div', { class: 'cempty' }, '빈 자리'),
@@ -2712,7 +3250,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const w = 2.5 + 4 * Math.min(1, p.sev / 0.8);
       g.appendChild(svgEl('line', { x1: cx(p.a), y1: cy(p.a), x2: cx(p.b), y2: cy(p.b), stroke: '#fff', 'stroke-width': w + 3, 'stroke-linecap': 'round', opacity: 0.8 }));
       const ln = svgEl('line', { x1: cx(p.a), y1: cy(p.a), x2: cx(p.b), y2: cy(p.b), stroke: p.color, 'stroke-width': w, 'stroke-linecap': 'round' });
-      if (p.kind === 'cat') ln.setAttribute('stroke-dasharray', '7 5');
+      if (p.kind === 'form') ln.setAttribute('stroke-dasharray', '9 5');
+      else if (p.kind === 'cat') ln.setAttribute('stroke-dasharray', '2 6');
       g.appendChild(ln);
       for (const q of [p.a, p.b]) g.appendChild(svgEl('circle', { cx: cx(q), cy: cy(q), r: 4.5, fill: p.color, stroke: '#fff', 'stroke-width': 1.5 }));
       svg.appendChild(g);
@@ -2752,13 +3291,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     let action;
     if (u.brush === 'b') action = cell && cell.t === 'b' ? 'erase' : 'booth';
     else if (u.brush === 'l') action = cell && cell.t === 'l' && cell.label === u.labelText ? 'erase' : 'label';
+    else if (u.brush === 'd') action = 'dir';
     else action = 'erase';
     pushHistory();
     const visited = new Set();
+    const redraw = (k) => {
+      const old = C.els.grid.querySelector(`.cell[data-k="${k}"]`);
+      const nu = cellEl(k, L.cells[k], '', false);
+      if (old) old.replaceWith(nu);
+    };
     const apply = (k) => {
       if (visited.has(k)) return;
       visited.add(k);
       const cur = L.cells[k];
+      if (action === 'dir') {
+        // 방향 붓: 부스 앞면 방향 지정 (같은 줄 전체 옵션)
+        const pick = u.dirPick === undefined ? 'd' : u.dirPick;
+        const keys = FM.setDirection(L, k, pick || null, u.dirWhole !== false);
+        keys.forEach((k2) => {
+          visited.add(k2);
+          redraw(k2);
+        });
+        return;
+      }
       if (action === 'booth') {
         if (cur && cur.t === 'b') return;
         L.cells[k] = { t: 'b' };
@@ -2794,6 +3349,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       grid.removeEventListener('pointercancel', up);
       // 가장자리까지 칠하면 격자를 자동으로 늘림
       if (FM.ensureMargin(L)) UI.toast(`격자를 넓혔어요 (${L.rows}줄 × ${L.cols}칸)`);
+      // 칸 모양이 바뀌면 자동 방향(직접 정한 방향 제외)을 다시 계산
+      if (action !== 'dir') FM.autoDirections(L);
       changed();
     };
     grid.addEventListener('pointermove', move);
@@ -3029,10 +3586,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if (!farms.length) return UI.toast('이 날 참여 농가가 없어요. ① 참여 명단에서 체크해 주세요.', 'warn');
     if (kind === 'fix' && !C.insp.counts.danger && !C.insp.counts.warn) return UI.toast('고칠 위험·주의 자리가 없어요. 👍', 'ok');
     const idx = new Map(farms.map((f, i) => [f.id, i]));
-    const cells = keys.map((k) => {
-      const [r, c] = FM.parseKey(k);
-      return { r, c };
-    });
+    const cells = FM.Sim.boothCells(L, keys);
     const initial = new Int32Array(keys.length).fill(-1);
     const fixed = new Uint8Array(keys.length);
     keys.forEach((k, i) => {
@@ -3060,9 +3614,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           fixed,
           toPlace,
           fresh: kind === 'all',
-          anchorPenalty: kind === 'fix' ? 0.12 : 0,
-          radius: st.radius,
-          vScale: st.vScale,
+          anchorPenalty: kind === 'fix' ? 1 : 0,
+          st,
           seed: (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0,
         });
         pushHistory();
@@ -3132,8 +3685,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     side.appendChild(
       section(
         '칸 그리기',
-        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스 칸'), brushBtn('l', '🏷 시설 표시'), brushBtn('x', '⌫ 지우개')),
-        u.brush === 'l'
+        h('div', { class: 'segs' }, brushBtn('b', '▦ 부스'), brushBtn('d', '➜ 방향'), brushBtn('l', '🏷 시설'), brushBtn('x', '⌫ 지우개')),
+        u.brush === 'd'
+          ? dirPicker()
+          : u.brush === 'l'
           ? h(
               'div',
               { class: 'label-pick' },
@@ -3160,6 +3715,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           : h('p', { class: 'muted small' }, u.brush === 'b' ? '빈 격자를 누르면 부스 칸이 생기고, 부스 칸을 다시 누르면 지워져요. 누른 채로 끌면 여러 칸을 한 번에 칠해요. 오른쪽·아래 끝까지 칠하면 격자가 자동으로 늘어나요.' : '누르거나 끌어서 칸을 지워요.')
       )
     );
+
+    side.appendChild(directionSection());
 
     const shapeSel = h(
       'select',
@@ -3361,6 +3918,103 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       )
     );
     side.appendChild(nextBtn('다음: ③ 농가 배치 →', 'assign'));
+  }
+
+  /** 방향 붓: 방향 고르기 + 같은 줄 한 번에 */
+  function dirPicker() {
+    const u = ui();
+    const pick = u.dirPick === undefined ? 'd' : u.dirPick;
+    const btn = (d, label) =>
+      h(
+        'button',
+        {
+          class: 'dir-btn' + (pick === d ? ' on' : ''),
+          title: d ? `앞면(손님 쪽)을 ${FM.DIR_LABEL[d]}으로` : '방향 지우기',
+          onclick: () => {
+            u.dirPick = d;
+            renderSide();
+          },
+        },
+        label
+      );
+    return h(
+      'div',
+      { class: 'dir-pick' },
+      h(
+        'div',
+        { class: 'dir-pad' },
+        h('span'),
+        btn('u', '▲ 위'),
+        h('span'),
+        btn('l', '◀ 왼쪽'),
+        btn(null, '없음'),
+        btn('r', '오른쪽 ▶'),
+        h('span'),
+        btn('d', '▼ 아래'),
+        h('span')
+      ),
+      h(
+        'label',
+        { class: 'check small' },
+        h('input', {
+          type: 'checkbox',
+          checked: u.dirWhole !== false,
+          onchange: (e) => (u.dirWhole = e.target.checked),
+        }),
+        '같은 줄 전체를 한 번에 (부스 하나만 클릭해도 그 줄이 모두 바뀜)'
+      ),
+      h('p', { class: 'muted small' }, '부스 앞면 = 손님이 서는 쪽이에요. 방향을 고른 뒤 부스를 클릭하거나, 누른 채로 여러 줄을 지나가면 한꺼번에 바뀌어요. 통로를 사이에 두고 앞면끼리 마주 보면 「마주봄」으로 보고 비슷한 품목을 떨어뜨려요.')
+    );
+  }
+
+  /** 부스 방향 요약 + 자동 설정 */
+  function directionSection() {
+    const L = LY();
+    const booths = Object.values(L.cells).filter((c) => c.t === 'b');
+    const withDir = booths.filter((c) => c.dir).length;
+    const manual = booths.filter((c) => c.dir && !c.da).length;
+    const counts = {};
+    for (const c of booths) if (c.dir) counts[c.dir] = (counts[c.dir] || 0) + 1;
+    return section(
+      '부스 방향 (마주봄 판단용)',
+      h(
+        'p',
+        { class: 'small' },
+        booths.length ? `방향 있음 ${withDir}/${booths.length}칸` : '부스 칸이 없어요',
+        manual ? ` · 직접 정함 ${manual}칸` : '',
+        withDir ? ' · ' + FM.DIRS.filter((d) => counts[d]).map((d) => `${FM.DIR_ARROW[d]} ${counts[d]}`).join('  ') : ''
+      ),
+      h(
+        'div',
+        { class: 'row gap wrap' },
+        h(
+          'button',
+          {
+            class: 'btn small',
+            disabled: !booths.length,
+            onclick: () => {
+              pushHistory();
+              const n = FM.autoDirections(L, 'all');
+              changed();
+              UI.toast(`모든 부스 방향을 자동으로 정했어요 (${n}칸 바뀜). 통로 쪽을 앞면으로 봐요.`, 'ok');
+            },
+          },
+          '🧭 전부 자동으로 정하기'
+        ),
+        h(
+          'button',
+          {
+            class: 'btn small ghost',
+            onclick: () => {
+              ui().brush = 'd';
+              renderSide();
+            },
+          },
+          '➜ 방향 붓으로 고치기'
+        )
+      ),
+      h('p', { class: 'muted small' }, '칸을 그리면 앞이 트인 쪽(통로 건너 다른 줄이 있으면 그쪽)을 앞면으로 자동으로 정해요. 직접 정한 방향은 그대로 둬요.')
+    );
   }
 
   function shiftLayout(L, dr, dc) {
@@ -3575,7 +4229,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       h('div', { class: 'sel-name' }, f.name),
       h('div', { class: 'muted small' }, [f.owner, f.phone].filter(Boolean).join(' · ')),
       h('div', { class: 'sel-items' }, f.category ? h('span', { class: 'cat-chip', style: { background: col.bg, borderColor: col.bd } }, f.category) : null, ' ', f.items),
-      (f.tags || []).length ? h('div', null, f.tags.map((t) => h('span', { class: 'tag' }, t))) : null,
+      (f.tags || []).length || (f.forms || []).length
+        ? h('div', null, (f.tags || []).map((t) => h('span', { class: 'tag raw', title: '원재료' }, t)), (f.forms || []).map((t) => h('span', { class: 'tag form', title: '제품 형태' }, t)))
+        : null,
+      L.cells[k].dir ? h('div', { class: 'muted small' }, `부스 앞면: ${FM.DIR_ARROW[L.cells[k].dir]} ${FM.DIR_LABEL[L.cells[k].dir]}쪽`) : null,
       h(
         'div',
         { class: 'row gap wrap' },
@@ -3651,7 +4308,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if (u.listFilter === 'unplaced' && C.cellOf[f.id]) return false;
         if (u.listFilter === 'pinned' && !L.pins[f.id]) return false;
         if (!q) return true;
-        return [f.name, f.owner, f.items, f.category, (f.tags || []).join(' ')].join(' ').toLowerCase().includes(q);
+        return [f.name, f.owner, f.items, f.category, (f.tags || []).join(' '), (f.forms || []).join(' ')].join(' ').toLowerCase().includes(q);
       });
       rows.sort((a, b) => (C.cellOf[a.id] ? 1 : 0) - (C.cellOf[b.id] ? 1 : 0) || (C.nums[C.cellOf[a.id]] || 0) - (C.nums[C.cellOf[b.id]] || 0));
       if (!rows.length) listBox.appendChild(h('p', { class: 'muted small center' }, q ? '검색 결과가 없어요.' : '해당하는 농가가 없어요.'));
@@ -3736,6 +4393,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         )
       )
     );
+    const rs = ins.rawStats;
+    if (rs)
+      side.appendChild(
+        section(
+          '같은 원재료 농가끼리 거리',
+          h(
+            'div',
+            { class: 'raw-stats' },
+            h('div', null, h('small', null, '가장 가까운'), h('b', { class: rs.min <= 1 ? 'bad' : rs.min <= 2 ? 'warn' : 'good' }, rs.facing && rs.min <= 1 ? '마주봄' : `${Math.round(rs.min * 10) / 10}칸`)),
+            h('div', null, h('small', null, '평균'), h('b', null, `${Math.round(rs.avg * 10) / 10}칸`)),
+            h('div', null, h('small', null, '2칸 이내'), h('b', { class: rs.within2 ? 'warn' : 'good' }, `${rs.within2}쌍`)),
+            h('div', null, h('small', null, '마주봄'), h('b', { class: rs.facing ? 'bad' : 'good' }, `${rs.facing}쌍`))
+          ),
+          h(
+            'button',
+            { class: 'link-btn small', onclick: () => setHighlight({ a: rs.minPair.a.key, b: rs.minPair.b.key }) || scrollToCell(rs.minPair.a.key) },
+            `가장 가까운 쌍: ${C.nums[rs.minPair.a.key]}번 ${FM.shortName(rs.minPair.a.farm.name)} ↔ ${C.nums[rs.minPair.b.key]}번 ${FM.shortName(rs.minPair.b.farm.name)} (${rs.minPair.rel.label})`
+          ),
+          h('p', { class: 'muted small' }, `원재료가 같은 ${rs.pairs}쌍 기준 (쌀·소금처럼 흔한 재료만 겹치는 쌍은 제외). 자동 배치는 이 거리를 최대한 벌려요.`)
+        )
+      );
     side.appendChild(
       section(
         null,
@@ -3746,10 +4424,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           h(
             'ul',
             { class: 'small' },
-            h('li', null, '유사도: 같은 품목군 +', st.wCat, ', 공통 품목(예: 꿀·떡·사과) +', st.wTag),
-            h('li', null, '거리 가중치: 바로 옆 1 · 대각선 0.5 · 한 칸 건너 0.25'),
-            h('li', null, '근접 위험도 = 유사도 × 거리 가중치 → 위험 ≥ 0.6 · 주의 ≥ 0.3 · 참고 ≥ 0.15'),
-            h('li', null, '예) 공통 품목이 바로 옆 = 위험, 같은 품목군만 바로 옆 = 주의, 같은 품목군이 대각선 = 참고')
+            h('li', null, `유사도 = 같은 원재료 +${st.wRaw} (결과물이 달라도: 포도↔와인, 참깨↔참기름) · 같은 계열 +일부 (블루베리↔아로니아) · 같은 형태 +${st.wForm} (즙·청·떡·젓갈…) · 같은 품목군 +${st.wCat}`),
+            h('li', null, `거리 = 1/칸 수 (바로 옆 1 · 대각선 0.71 · 2칸 0.5 · 3칸 0.33 …, ${st.radius >= 99 ? '전체' : st.radius + '칸'}까지 계산)`),
+            h('li', null, '마주봄 = 통로 건너 앞면끼리 정면이면 1 (바로 옆과 같음), 비껴서 0.75 · 등 맞댐은 0.4배로 약하게'),
+            h('li', null, `근접 위험도 = 유사도 × 거리 → 위험 ≥ ${FM.LEVELS.danger} · 주의 ≥ ${FM.LEVELS.warn} · 참고 ≥ ${FM.LEVELS.info}`),
+            h('li', null, '예) 같은 원재료가 바로 옆·마주봄·대각선 = 위험, 2칸 거리 = 주의, 3~4칸 = 참고')
           )
         )
       )
@@ -3778,7 +4457,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         sel('선으로 이을 쌍', 'lineScope', [
           ['warn', '위험·주의만 (기본)'],
           ['info', '참고까지'],
-          ['tag', '공통 품목은 모두'],
+          ['tag', '원재료·형태가 겹치면 모두'],
           ['all', '같은 품목군까지 모두'],
         ]),
         st.lineScope === 'tag' || st.lineScope === 'all'
@@ -3815,12 +4494,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 h(
                   'div',
                   { class: 'legend-row' },
-                  h('span', { class: 'legend-line' + (l.kind === 'cat' ? ' dashed' : ''), style: { borderColor: l.color } }),
+                  h('span', { class: 'legend-line' + (l.kind === 'form' ? ' dashed' : l.kind === 'cat' ? ' dotted' : ''), style: { borderColor: l.color } }),
                   h('span', null, l.label),
                   h('b', null, l.count)
                 )
               ),
-              h('p', { class: 'muted small' }, '실선 = 공통 품목, 점선 = 같은 품목군만. 굵을수록 가까워요.')
+              h('p', { class: 'muted small' }, '실선 = 같은 원재료·계열, 긴 점선 = 같은 형태, 짧은 점선 = 같은 품목군만. 굵을수록 가깝거나 마주 봐요.')
             )
           : h('p', { class: 'ok-text' }, '✓ 선으로 이을 만큼 가까운 유사 품목이 없어요')
       )
@@ -4608,6 +5287,35 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       h('span', { class: 'muted small' }, '체크를 풀면 그날 불참(취소)으로, 체크하면 참여로 바뀌어요. 배치도에도 바로 반영돼요.')
     );
     container.appendChild(summary);
+    // 여러 농가가 같이 쓰는 원재료 — 배치할 때 떨어뜨려야 할 묶음
+    const rawCount = {};
+    for (const f of ev.farms) if (ev.days.some((d) => f.days[d.id])) for (const t of f.tags || []) (rawCount[t] = rawCount[t] || []).push(f);
+    const overlaps = Object.entries(rawCount)
+      .filter(([, fs]) => fs.length >= 2)
+      .sort((a, b) => b[1].length - a[1].length);
+    if (overlaps.length)
+      container.appendChild(
+        h(
+          'div',
+          { class: 'roster-summary overlap' },
+          h('span', { class: 'small', title: '같은 원재료를 쓰는 농가끼리는 자동 배치가 최대한 멀리, 마주 보지 않게 놓아요' }, '🔁 겹치는 원재료'),
+          overlaps.slice(0, 18).map(([t, fs]) =>
+            h(
+              'button',
+              {
+                class: 'tag raw btn-tag',
+                title: fs.map((f) => f.name).join('\n') + '\n(누르면 이 원재료로 검색)',
+                onclick: () => {
+                  App.ui.rosterSearch = t;
+                  App.render();
+                },
+              },
+              `${t} ${fs.length}곳`
+            )
+          ),
+          overlaps.length > 18 ? h('span', { class: 'muted small' }, `외 ${overlaps.length - 18}가지`) : null
+        )
+      );
 
     const tableWrap = h('div', { class: 'table-wrap' });
     container.appendChild(tableWrap);
@@ -4617,7 +5325,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       const rows = ev.farms.filter((f) => {
         if (App.ui.rosterCat && f.category !== App.ui.rosterCat) return false;
         if (!q2) return true;
-        return [f.name, f.owner, f.phone, f.items, f.category, f.sigungu, (f.tags || []).join(' ')].join(' ').toLowerCase().includes(q2);
+        return [f.name, f.owner, f.phone, f.items, f.category, f.sigungu, (f.tags || []).join(' '), (f.forms || []).join(' ')].join(' ').toLowerCase().includes(q2);
       });
       UI.clear(tableWrap).appendChild(buildTable(rows));
     }
@@ -4660,7 +5368,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           h('th', null, '지역'),
           h('th', null, '품목군'),
           h('th', { class: 'th-items' }, '신청품목'),
-          h('th', { title: '유사 품목 판단에 쓰는 키워드 그룹 (농가 수정에서 바꿀 수 있어요)' }, '유사 품목 태그'),
+          h('th', { title: '비슷한 품목 판단에 쓰는 원재료(파랑)·제품 형태(회색). 농가 수정에서 바꿀 수 있어요' }, '원재료 · 형태'),
           h('th', null, '신규'),
           h('th', null, '장소'),
           h('th', null, '')
@@ -4702,7 +5410,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             h('td', { class: 'nowrap small' }, [f.sido, f.sigungu].filter(Boolean).join(' ')),
             h('td', null, f.category ? h('span', { class: 'cat-chip', style: { background: col.bg, borderColor: col.bd } }, f.category) : h('span', { class: 'muted' }, '-')),
             h('td', { class: 'td-items' }, f.items),
-            h('td', null, (f.tags || []).map((t) => h('span', { class: 'tag' + (f.tagsManual ? ' manual' : '') }, t))),
+            h(
+              'td',
+              { class: 'td-tags' },
+              (f.tags || []).map((t) => h('span', { class: 'tag raw' + (f.tagsManual ? ' manual' : ''), title: '원재료' }, t)),
+              (f.forms || []).map((t) => h('span', { class: 'tag form' + (f.tagsManual ? ' manual' : ''), title: '제품 형태' }, t))
+            ),
             h('td', { class: 'center' }, f.isNew),
             h('td', { class: 'nowrap' }, f.place),
             h(
@@ -4775,29 +5488,48 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const cats = [...new Set(ev.farms.map((f) => f.category).concat(Object.keys(FM.CATEGORY_HUES)).filter(Boolean))].sort();
     const field = (label, key, attrs) =>
       h('label', { class: 'field' }, h('span', null, label), h('input', Object.assign({ class: 'input', value: d[key] || '', oninput: (e) => (d[key] = e.target.value) }, attrs || {})));
+    const splitList = (v) =>
+      v
+        .split(/[,，]/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+    d.forms = d.forms || [];
+    const tagNote = h('small', { class: 'muted' }, d.tagsManual ? '직접 지정한 값을 사용해요.' : '신청품목에서 자동으로 뽑았어요. 틀리면 고쳐 주세요.');
+    const manualOn = () => {
+      d.tagsManual = true;
+      tagNote.textContent = '직접 지정한 값을 사용해요.';
+    };
     const tagInput = h('input', {
       class: 'input',
       value: (d.tags || []).join(', '),
-      placeholder: '예: 꿀·양봉, 떡',
+      placeholder: '예: 사과, 꿀, 참깨',
       oninput: (e) => {
-        d.tags = e.target.value
-          .split(/[,，]/)
-          .map((x) => x.trim())
-          .filter(Boolean);
-        d.tagsManual = true;
-        tagNote.textContent = '직접 지정한 태그를 사용해요.';
+        d.tags = splitList(e.target.value);
+        manualOn();
       },
     });
-    const tagNote = h('small', { class: 'muted' }, d.tagsManual ? '직접 지정한 태그를 사용해요.' : '신청품목에서 자동으로 뽑은 태그예요.');
+    const formInput = h('input', {
+      class: 'input',
+      value: d.forms.join(', '),
+      placeholder: '예: 즙·주스, 잼·소스',
+      oninput: (e) => {
+        d.forms = splitList(e.target.value);
+        manualOn();
+      },
+    });
+    const autoFill = () => {
+      const x = FM.Sim.extract(d.items, App.settings());
+      d.tags = x.raw;
+      d.forms = x.forms;
+      tagInput.value = d.tags.join(', ');
+      formInput.value = d.forms.join(', ');
+    };
     const itemsArea = h('textarea', {
       class: 'input',
       rows: 3,
       oninput: (e) => {
         d.items = e.target.value;
-        if (!d.tagsManual) {
-          d.tags = FM.Sim.extractTags(d.items, App.settings());
-          tagInput.value = d.tags.join(', ');
-        }
+        if (!d.tagsManual) autoFill();
       },
     });
     itemsArea.value = d.items || '';
@@ -4825,27 +5557,28 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       h(
         'div',
         { class: 'field span2' },
-        h('span', null, '유사 품목 태그 (쉼표로 구분)'),
+        h('span', null, '원재료 (쉼표로 구분) — 결과물이 달라도 원재료가 같으면 떨어뜨려요'),
+        tagInput,
+        h('span', null, '제품 형태 (쉼표로 구분) — 즙·청·떡·젓갈처럼 같은 형태끼리도 떨어뜨려요'),
+        formInput,
         h(
           'div',
           { class: 'row gap' },
-          tagInput,
+          tagNote,
           h(
             'button',
             {
               class: 'btn small',
               type: 'button',
               onclick: () => {
-                d.tags = FM.Sim.extractTags(d.items, App.settings());
+                autoFill();
                 d.tagsManual = false;
-                tagInput.value = d.tags.join(', ');
-                tagNote.textContent = '신청품목에서 자동으로 뽑은 태그예요.';
+                tagNote.textContent = '신청품목에서 자동으로 뽑았어요. 틀리면 고쳐 주세요.';
               },
             },
             '자동으로 다시 뽑기'
           )
-        ),
-        tagNote
+        )
       ),
       field('신규여부', 'isNew', { placeholder: 'ㅇ / ×' }),
       field('장소', 'place'),
@@ -4878,7 +5611,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     let m = null;
     const save = () => {
       if (!String(d.name).trim()) return UI.toast('농가명을 입력해 주세요.', 'warn');
-      if (!d.tagsManual) d.tags = FM.Sim.extractTags(d.items, App.settings());
+      if (!d.tagsManual) {
+        const x = FM.Sim.extract(d.items, App.settings());
+        d.tags = x.raw;
+        d.forms = x.forms;
+      }
       if (isNew) {
         const dup = ev.farms.find((f) => FM.isSameFarm(f, d));
         if (dup) UI.toast(`이미 비슷한 농가(${dup.name})가 있어요. 확인해 주세요.`, 'warn');
@@ -4985,7 +5722,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if (fromExcel) list = FM.Excel.rowsToFarms(opt.wbData.sheets[S.sheet].rows, S.headerRow, S.map, S.dayCols);
       else
         list = opt.fromEvent.farms.map((f, i) => ({
-          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, memo: f.memo, tags: f.tags, tagsManual: f.tagsManual },
+          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
           dayVals: {},
           rowNo: i + 1,
         }));
@@ -5275,16 +6012,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         if (c.existing) {
           touched.add(c.existing.id);
           if (S.dup === 'skip') continue;
-          for (const [k, v] of Object.entries(c.data)) if (v !== '' && v != null && k !== 'tags' && k !== 'tagsManual') c.existing[k] = v;
+          for (const [k, v] of Object.entries(c.data)) if (v !== '' && v != null && k !== 'tags' && k !== 'forms' && k !== 'tagsManual') c.existing[k] = v;
           for (const d of ev.days) if (dayVals[d.id]) c.existing.days[d.id] = true;
-          if (!c.existing.tagsManual) c.existing.tags = FM.Sim.extractTags(c.existing.items, st);
+          if (!c.existing.tagsManual) FM.Sim.refreshTags([c.existing], st);
           updated++;
         } else {
           const f = FM.newFarm(Object.assign({}, c.data));
           for (const d of ev.days) if (dayVals[d.id]) f.days[d.id] = true;
           if (!f.tagsManual || !Array.isArray(f.tags)) {
             f.tagsManual = false;
-            f.tags = FM.Sim.extractTags(f.items, st);
+            FM.Sim.refreshTags([f], st);
           }
           ev.farms.push(f);
           touched.add(f.id);
@@ -5468,13 +6205,26 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         h('h4', null, '① 참여 명단'),
         h('ul', null, h('li', null, '일정을 누르고 「📥 엑셀 명단 넣기」로 명단 엑셀을 넣어요. 「장소」 열이 있으면 해당 장소 농가만 골라 줘요.'), h('li', null, '날짜(토/일)별 체크로 참여 여부를 정해요. 취소된 농가는 체크를 풀고, 추가 농가는 「엑셀로 추가 명단 넣기」나 「농가 직접 추가」로 넣어요.')),
         h('h4', null, '② 칸 만들기'),
-        h('ul', null, h('li', null, '격자를 클릭·드래그해서 부스 칸을 만들어요. 한 칸 = 농가 한 곳.'), h('li', null, '위쪽 숫자가 「남은 칸 수」예요. 0이 되면 참여 농가 수와 딱 맞아요.'), h('li', null, '장소마다 모양이 다르니 한 번 만든 모양은 「장소 기본형으로 저장」해 두면 다음 일정에서 불러올 수 있어요.')),
+        h(
+          'ul',
+          null,
+          h('li', null, '격자를 클릭·드래그해서 부스 칸을 만들어요. 한 칸 = 농가 한 곳. 격자 끝까지 칠하면 자동으로 넓어져요.'),
+          h('li', null, '위쪽 숫자가 「남은 칸 수」예요. 0이 되면 참여 농가 수와 딱 맞아요.'),
+          h('li', null, '부스 앞면(손님 쪽) 방향 ▲▼◀▶ 은 자동으로 정해져요. 틀린 줄은 「➜ 방향」 붓으로 방향을 고르고 그 줄의 부스 하나만 클릭하면 줄 전체가 바뀌어요. 통로 건너 마주 보는 부스는 바로 옆처럼 떨어뜨려요.'),
+          h('li', null, '장소마다 모양이 다르니 한 번 만든 모양은 「장소 기본형으로 저장」해 두면 다음 일정에서 불러올 수 있어요.')
+        ),
         h('h4', null, '③ 농가 배치'),
         h('ul', null, h('li', null, '「⚡ 자동 배치」를 누르면 비슷한 품목끼리 붙지 않게 자동으로 놓아요. 누를 때마다 다른 배치안이 나와요.'), h('li', null, '꼭 정해진 자리가 있는 농가는 오른쪽 목록에서 검색 → 농가 클릭 → 칸 클릭하면 그 자리에 📌고정돼요. 고정된 농가는 자동 배치해도 안 움직여요.'), h('li', null, '칸을 끌어서 다른 칸에 놓으면 서로 자리가 바뀌어요. 잘못하면 「↶ 되돌리기」(Ctrl+Z).')),
         h('h4', null, '④ 검수'),
-        h('ul', null, h('li', null, '손으로 바꾼 뒤 「검수」를 보면 비슷한 품목이 가까이 붙은 곳을 선으로 이어 보여줘요. 선 색이 다르면 다른 품목이에요.'), h('li', null, '위험(빨강) = 같은 품목이 바로 옆, 주의(주황) = 같은 품목군이 바로 옆 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.')),
+        h(
+          'ul',
+          null,
+          h('li', null, '원재료가 같으면(사과↔사과즙, 참깨↔참기름, 포도↔와인) 결과물이 달라도 비슷한 품목으로 봐요. 즙·청·떡·젓갈처럼 같은 형태, 같은 품목군도 함께 봐요.'),
+          h('li', null, '가까이 붙거나 통로 건너 마주 보는 곳을 선으로 이어 보여줘요. 선 색이 다르면 다른 원재료·형태예요.'),
+          h('li', null, '위험(빨강) = 같은 원재료가 바로 옆·대각선·마주봄, 주의(주황) = 2칸 거리 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.')
+        ),
         h('h4', null, '⑤ 저장·출력·공유'),
-        h('ul', null, h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요.'), h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')),
+        h('ul', null, h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요. 배치가 끝나면 배치 화면 위의 「🖼 그림 저장」으로 바로 저장해도 돼요.'), h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')),
         h('h4', null, '일정 바꾸기'),
         h('p', null, '처음 화면의 일정 카드 「⋯ → 일정 수정」에서 날짜를 바꾸거나 「앞에 금요일 추가」를 할 수 있어요. 새 일정은 「＋ 일정 추가」.'),
         h('p', { class: 'muted small' }, '버전: ' + (window.FM_BUILD || '개발용'))
@@ -5489,8 +6239,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const draft = FM.clone(st);
     const venues = FM.clone(App.state.venues);
     let m = null;
-    const kw = h('textarea', { class: 'input mono', rows: 12, spellcheck: 'false' });
-    kw.value = draft.keywords;
+    const rawTa = h('textarea', { class: 'input mono', rows: 12, spellcheck: 'false' });
+    rawTa.value = draft.rawDict;
+    const formTa = h('textarea', { class: 'input mono', rows: 8, spellcheck: 'false' });
+    formTa.value = draft.formDict;
     const slider = (label, key, min, max, step, fmt) => {
       const out = h('b', null, fmt(draft[key]));
       return h(
@@ -5570,22 +6322,32 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const body = h(
       'div',
       { class: 'settings' },
-      h('h4', null, '유사 품목 판단 기준'),
-      h('p', { class: 'muted small' }, '두 농가의 유사도 = (같은 품목군이면 +A) + (공통 품목 태그가 있으면 +B). 자동 배치는 「유사도 × 거리 가중치」의 합이 가장 작아지도록 배치해요.'),
-      h('div', { class: 'grid2' }, slider('A. 같은 품목군 가중치', 'wCat', 0, 1, 0.05, (v) => v.toFixed(2)), slider('B. 공통 품목 가중치', 'wTag', 0, 1, 0.05, (v) => v.toFixed(2))),
+      h('h4', null, '비슷한 품목 판단 기준'),
+      h(
+        'p',
+        { class: 'muted small' },
+        '두 농가의 유사도 = 같은 원재료(+A, 결과물이 달라도) + 같은 제품 형태(+B) + 같은 품목군(+C). 근접 위험도 = 유사도 × 거리(바로 옆·마주봄 1, 2칸 0.5 …). 자동 배치는 이 값이 큰 쌍부터 없애고, 남은 쌍도 최대한 멀리 떨어뜨려요.'
+      ),
+      h(
+        'div',
+        { class: 'grid3' },
+        slider('A. 같은 원재료', 'wRaw', 0, 1, 0.05, (v) => v.toFixed(2)),
+        slider('B. 같은 제품 형태', 'wForm', 0, 1, 0.05, (v) => v.toFixed(2)),
+        slider('C. 같은 품목군', 'wCat', 0, 1, 0.05, (v) => v.toFixed(2))
+      ),
       h(
         'div',
         { class: 'grid2' },
         sel(
-          '자동 배치가 살피는 거리',
+          '떨어뜨리는 거리 (자동 배치·검수가 살피는 범위)',
           'radius',
           [
-            [1, '바로 옆(상하좌우)만'],
-            [1.5, '대각선까지'],
-            [2.3, '한 칸 건너까지 (기본)'],
-            [3.2, '두 칸 건너까지'],
+            [2, '2칸까지'],
+            [4, '4칸까지'],
+            [6, '6칸까지 (기본)'],
+            [99, '배치도 전체'],
           ],
-          '멀리까지 살필수록 비슷한 품목이 더 넓게 흩어져요.'
+          '넓게 살필수록 같은 원재료 농가가 더 멀리 흩어져요.'
         ),
         sel(
           '위·아래 칸 거리',
@@ -5598,10 +6360,43 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           '줄 배치에서 위아래 칸이 서로 등을 맞대고 있다면 2배를 고르세요.'
         )
       ),
-      h('h4', null, '품목 키워드 사전'),
-      h('p', { class: 'muted small' }, '한 줄에 「그룹명: 키워드, 키워드」. 키워드가 신청품목에 들어 있으면 그 그룹 태그가 붙어요. ', h('code', null, '=배'), ' 정확히 일치 · ', h('code', null, '^묵'), ' ~로 시작 · ', h('code', null, '청$'), ' ~로 끝남 · ', h('code', null, '!김치'), ' 제외. 괄호 안 내용은 무시해요.'),
-      kw,
-      h('div', { class: 'row gap' }, h('button', { class: 'btn small', onclick: () => (kw.value = FM.DEFAULT_KEYWORDS) }, '기본 사전으로 되돌리기')),
+      h('h4', null, '원재료 사전'),
+      h(
+        'p',
+        { class: 'muted small' },
+        '한 줄에 「계열 > 원재료: 키워드, 키워드」. 신청품목 낱말에 키워드가 있으면 그 원재료로 봐요(괄호 안 재료 포함). 원재료 뒤 ',
+        h('code', null, '(0.5)'),
+        ' = 흔한 재료라 약하게, ',
+        h('code', null, '@계열: 0.4'),
+        ' = 원재료는 달라도 같은 계열이면 이만큼 비슷. 키워드: ',
+        h('code', null, '=배'),
+        ' 정확히 · ',
+        h('code', null, '^묵'),
+        ' ~로 시작 · ',
+        h('code', null, '청$'),
+        ' ~로 끝남 · ',
+        h('code', null, '!김치'),
+        ' 제외.'
+      ),
+      rawTa,
+      h('h4', null, '제품 형태 사전'),
+      h('p', { class: 'muted small' }, '한 줄에 「형태: 키워드, 키워드」. 원재료가 달라도 즙·청·떡·젓갈처럼 같은 형태면 손님이 겹친다고 봐요. 형태 뒤 (0.5) = 흔한 부가 상품이라 약하게.'),
+      formTa,
+      h(
+        'div',
+        { class: 'row gap' },
+        h(
+          'button',
+          {
+            class: 'btn small',
+            onclick: () => {
+              rawTa.value = FM.DEFAULT_RAW_DICT;
+              formTa.value = FM.DEFAULT_FORM_DICT;
+            },
+          },
+          '두 사전 모두 기본값으로 되돌리기'
+        )
+      ),
       h('h4', null, '장소'),
       venueBox,
       h('h4', null, '데이터'),
@@ -5656,15 +6451,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     );
 
     const save = () => {
-      const kwChanged = kw.value !== st.keywords;
-      draft.keywords = kw.value;
+      const kwChanged = rawTa.value !== st.rawDict || formTa.value !== st.formDict;
+      draft.rawDict = rawTa.value;
+      draft.formDict = formTa.value;
       Object.assign(st, draft);
       App.state.venues = venues.map((v) => Object.assign({}, v, { template: (App.state.venues.find((o) => o.id === v.id) || {}).template || null }));
       if (kwChanged) for (const ev of App.state.events) FM.Sim.refreshTags(ev.farms, st);
       m.close();
       App.changed();
       App.render();
-      UI.toast('설정을 저장했어요.' + (kwChanged ? ' 품목 태그를 다시 계산했어요.' : ''), 'ok');
+      UI.toast('설정을 저장했어요.' + (kwChanged ? ' 원재료·형태를 다시 계산했어요 (직접 고친 농가는 그대로).' : ''), 'ok');
     };
     m = UI.modal({
       title: '⚙ 설정',
@@ -5677,8 +6473,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           {
             class: 'btn ghost',
             onclick: () => {
-              const keep = draft.keywords;
-              Object.assign(draft, FM.clone(FM.DEFAULT_SETTINGS), { keywords: keep });
+              const keep = { rawDict: rawTa.value, formDict: formTa.value, zoom: draft.zoom, zoomEdit: draft.zoomEdit };
+              Object.assign(draft, FM.clone(FM.DEFAULT_SETTINGS), keep);
               m.close();
               Object.assign(st, draft);
               App.changed();

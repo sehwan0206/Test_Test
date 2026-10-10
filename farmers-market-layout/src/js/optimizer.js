@@ -19,51 +19,76 @@
   const FM = (root.FM = root.FM || {});
   const Opt = (FM.Opt = {});
 
-  /** 각 칸에서 radius 이내의 이웃 칸과 거리 가중치 (CSR 형식) */
-  Opt.buildNeighbors = function (cells, radius, vScale) {
+  /**
+   * 각 칸의 이웃 칸과 근접도 가중치 (CSR 형식)
+   * cells: [{r, c, dir}] — 가중치는 검수와 같은 FM.Sim.relation (거리 1/d + 마주봄·등맞댐 보정)
+   */
+  Opt.buildNeighbors = function (cells, st) {
     const K = cells.length;
+    const lists = Array.from({ length: K }, () => []);
+    for (let i = 0; i < K; i++)
+      for (let j = i + 1; j < K; j++) {
+        const p = FM.Sim.relation(cells[i], cells[j], st).p;
+        if (p <= 0) continue;
+        lists[i].push(j, p);
+        lists[j].push(i, p);
+      }
     const off = new Int32Array(K + 1);
-    const idx = [];
-    const w = [];
-    const R = radius + 1e-9;
+    let n = 0;
     for (let i = 0; i < K; i++) {
-      off[i] = idx.length;
-      const a = cells[i];
-      for (let j = 0; j < K; j++) {
-        if (i === j) continue;
-        const b = cells[j];
-        const dx = b.c - a.c;
-        const dy = (b.r - a.r) * vScale;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > R * R) continue;
-        idx.push(j);
-        w.push(1 / d2);
+      off[i] = n;
+      n += lists[i].length / 2;
+    }
+    off[K] = n;
+    const idx = new Int32Array(n);
+    const w = new Float32Array(n);
+    for (let i = 0; i < K; i++) {
+      let o = off[i];
+      for (let x = 0; x < lists[i].length; x += 2, o++) {
+        idx[o] = lists[i][x];
+        w[o] = lists[i][x + 1];
       }
     }
-    off[K] = idx.length;
-    return { off, idx: Int32Array.from(idx), w: Float32Array.from(w), K };
+    return { off, idx, w, K };
   };
 
-  Opt.totalCost = function (A, nb, S, N1) {
+  /**
+   * 쌍별 벌점 G(x), x = 유사도 × 근접도(= 근접 위험도)
+   *   가까운 충돌일수록 훨씬 크게: 위험·주의 구간(FM.LEVELS)에 추가 벌점을 줘서
+   *   「먼 곳 여러 쌍을 조금 줄이는 대신 한 쌍을 붙여 버리는」 해를 피함
+   */
+  const G = (x) => {
+    const W = FM.LEVELS.warn;
+    const D = FM.LEVELS.danger;
+    return x + (x > W ? 4 * (x - W) : 0) + (x > D ? 8 * (x - D) : 0);
+  };
+  Opt.penalty = G;
+  Opt.SHAPE = 'level';
+
+  Opt.totalCost = function (A, nb, S, N1, shaped) {
     let c = 0;
     const { off, idx, w } = nb;
     for (let i = 0; i < A.length; i++) {
       const row = A[i] * N1;
-      for (let k = off[i]; k < off[i + 1]; k++) c += w[k] * S[row + A[idx[k]]];
+      for (let k = off[i]; k < off[i + 1]; k++) {
+        const x = w[k] * S[row + A[idx[k]]];
+        c += shaped ? G(x) : x;
+      }
     }
     return c / 2;
   };
 
   /**
    * @param {object} p
-   *   cells: [{r,c}]            부스 칸 목록 (K)
+   *   cells: [{r,c,dir}]        부스 칸 목록 (K)
    *   S, N1                     유사도 행렬 (N1 = 농가수 + 1, 마지막 = 빈 자리)
    *   initial: Int32Array(K)    현재 배치 (농가 인덱스, 비었으면 -1)
    *   fixed:   Uint8Array(K)    1 = 움직이지 않는 칸
    *   toPlace: number[]         새로 배치할 농가 인덱스 (우선순위 순)
    *   fresh:   boolean          true = 고정되지 않은 칸을 비우고 처음부터 재배치
    *   anchorPenalty: number     자리 이동 1건당 벌점 (0 = 자유 재배치)
-   *   radius, vScale, seed, restarts, iterations
+   *   st                        설정 (radius, vScale — 근접도 계산용)
+   *   seed, restarts, iterations
    * @returns {{assign: Int32Array, cost: number, unplaced: number[], moved: number}}
    */
   Opt.optimize = function (p) {
@@ -72,7 +97,7 @@
     const N1 = p.N1;
     const E = N1 - 1;
     const S = p.S;
-    const nb = Opt.buildNeighbors(cells, p.radius, p.vScale || 1);
+    const nb = Opt.buildNeighbors(cells, p.st);
     const rng = FM.mulberry32(p.seed == null ? Date.now() : p.seed);
     const lam = p.anchorPenalty || 0;
 
@@ -119,13 +144,13 @@
         const n = idx[k];
         if (n === j) continue;
         const g = A[n];
-        d += w[k] * (S[rj + g] - S[ri + g]);
+        d += G(w[k] * S[rj + g]) - G(w[k] * S[ri + g]);
       }
       for (let k = off[j]; k < off[j + 1]; k++) {
         const n = idx[k];
         if (n === i) continue;
         const g = A[n];
-        d += w[k] * (S[ri + g] - S[rj + g]);
+        d += G(w[k] * S[ri + g]) - G(w[k] * S[rj + g]);
       }
       if (anchor) {
         const oi = anchor[i];
@@ -140,7 +165,7 @@
     function localCost(A, i, f) {
       let c = 0;
       const row = f * N1;
-      for (let k = off[i]; k < off[i + 1]; k++) c += w[k] * S[row + A[idx[k]]];
+      for (let k = off[i]; k < off[i + 1]; k++) c += G(w[k] * S[row + A[idx[k]]]);
       return c;
     }
 
@@ -229,7 +254,7 @@
     }
 
     function fullCost(A) {
-      let c = Opt.totalCost(A, nb, S, N1);
+      let c = Opt.totalCost(A, nb, S, N1, true);
       if (anchor) for (let i = 0; i < K; i++) if (A[i] !== E && A[i] !== anchor[i]) c += lam;
       return c;
     }

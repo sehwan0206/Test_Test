@@ -609,6 +609,35 @@
       h('span', { class: 'muted small' }, '체크를 풀면 그날 불참(취소)으로, 체크하면 참여로 바뀌어요. 배치도에도 바로 반영돼요.')
     );
     container.appendChild(summary);
+    // 여러 농가가 같이 쓰는 원재료 — 배치할 때 떨어뜨려야 할 묶음
+    const rawCount = {};
+    for (const f of ev.farms) if (ev.days.some((d) => f.days[d.id])) for (const t of f.tags || []) (rawCount[t] = rawCount[t] || []).push(f);
+    const overlaps = Object.entries(rawCount)
+      .filter(([, fs]) => fs.length >= 2)
+      .sort((a, b) => b[1].length - a[1].length);
+    if (overlaps.length)
+      container.appendChild(
+        h(
+          'div',
+          { class: 'roster-summary overlap' },
+          h('span', { class: 'small', title: '같은 원재료를 쓰는 농가끼리는 자동 배치가 최대한 멀리, 마주 보지 않게 놓아요' }, '🔁 겹치는 원재료'),
+          overlaps.slice(0, 18).map(([t, fs]) =>
+            h(
+              'button',
+              {
+                class: 'tag raw btn-tag',
+                title: fs.map((f) => f.name).join('\n') + '\n(누르면 이 원재료로 검색)',
+                onclick: () => {
+                  App.ui.rosterSearch = t;
+                  App.render();
+                },
+              },
+              `${t} ${fs.length}곳`
+            )
+          ),
+          overlaps.length > 18 ? h('span', { class: 'muted small' }, `외 ${overlaps.length - 18}가지`) : null
+        )
+      );
 
     const tableWrap = h('div', { class: 'table-wrap' });
     container.appendChild(tableWrap);
@@ -618,7 +647,7 @@
       const rows = ev.farms.filter((f) => {
         if (App.ui.rosterCat && f.category !== App.ui.rosterCat) return false;
         if (!q2) return true;
-        return [f.name, f.owner, f.phone, f.items, f.category, f.sigungu, (f.tags || []).join(' ')].join(' ').toLowerCase().includes(q2);
+        return [f.name, f.owner, f.phone, f.items, f.category, f.sigungu, (f.tags || []).join(' '), (f.forms || []).join(' ')].join(' ').toLowerCase().includes(q2);
       });
       UI.clear(tableWrap).appendChild(buildTable(rows));
     }
@@ -661,7 +690,7 @@
           h('th', null, '지역'),
           h('th', null, '품목군'),
           h('th', { class: 'th-items' }, '신청품목'),
-          h('th', { title: '유사 품목 판단에 쓰는 키워드 그룹 (농가 수정에서 바꿀 수 있어요)' }, '유사 품목 태그'),
+          h('th', { title: '비슷한 품목 판단에 쓰는 원재료(파랑)·제품 형태(회색). 농가 수정에서 바꿀 수 있어요' }, '원재료 · 형태'),
           h('th', null, '신규'),
           h('th', null, '장소'),
           h('th', null, '')
@@ -703,7 +732,12 @@
             h('td', { class: 'nowrap small' }, [f.sido, f.sigungu].filter(Boolean).join(' ')),
             h('td', null, f.category ? h('span', { class: 'cat-chip', style: { background: col.bg, borderColor: col.bd } }, f.category) : h('span', { class: 'muted' }, '-')),
             h('td', { class: 'td-items' }, f.items),
-            h('td', null, (f.tags || []).map((t) => h('span', { class: 'tag' + (f.tagsManual ? ' manual' : '') }, t))),
+            h(
+              'td',
+              { class: 'td-tags' },
+              (f.tags || []).map((t) => h('span', { class: 'tag raw' + (f.tagsManual ? ' manual' : ''), title: '원재료' }, t)),
+              (f.forms || []).map((t) => h('span', { class: 'tag form' + (f.tagsManual ? ' manual' : ''), title: '제품 형태' }, t))
+            ),
             h('td', { class: 'center' }, f.isNew),
             h('td', { class: 'nowrap' }, f.place),
             h(
@@ -776,29 +810,48 @@
     const cats = [...new Set(ev.farms.map((f) => f.category).concat(Object.keys(FM.CATEGORY_HUES)).filter(Boolean))].sort();
     const field = (label, key, attrs) =>
       h('label', { class: 'field' }, h('span', null, label), h('input', Object.assign({ class: 'input', value: d[key] || '', oninput: (e) => (d[key] = e.target.value) }, attrs || {})));
+    const splitList = (v) =>
+      v
+        .split(/[,，]/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+    d.forms = d.forms || [];
+    const tagNote = h('small', { class: 'muted' }, d.tagsManual ? '직접 지정한 값을 사용해요.' : '신청품목에서 자동으로 뽑았어요. 틀리면 고쳐 주세요.');
+    const manualOn = () => {
+      d.tagsManual = true;
+      tagNote.textContent = '직접 지정한 값을 사용해요.';
+    };
     const tagInput = h('input', {
       class: 'input',
       value: (d.tags || []).join(', '),
-      placeholder: '예: 꿀·양봉, 떡',
+      placeholder: '예: 사과, 꿀, 참깨',
       oninput: (e) => {
-        d.tags = e.target.value
-          .split(/[,，]/)
-          .map((x) => x.trim())
-          .filter(Boolean);
-        d.tagsManual = true;
-        tagNote.textContent = '직접 지정한 태그를 사용해요.';
+        d.tags = splitList(e.target.value);
+        manualOn();
       },
     });
-    const tagNote = h('small', { class: 'muted' }, d.tagsManual ? '직접 지정한 태그를 사용해요.' : '신청품목에서 자동으로 뽑은 태그예요.');
+    const formInput = h('input', {
+      class: 'input',
+      value: d.forms.join(', '),
+      placeholder: '예: 즙·주스, 잼·소스',
+      oninput: (e) => {
+        d.forms = splitList(e.target.value);
+        manualOn();
+      },
+    });
+    const autoFill = () => {
+      const x = FM.Sim.extract(d.items, App.settings());
+      d.tags = x.raw;
+      d.forms = x.forms;
+      tagInput.value = d.tags.join(', ');
+      formInput.value = d.forms.join(', ');
+    };
     const itemsArea = h('textarea', {
       class: 'input',
       rows: 3,
       oninput: (e) => {
         d.items = e.target.value;
-        if (!d.tagsManual) {
-          d.tags = FM.Sim.extractTags(d.items, App.settings());
-          tagInput.value = d.tags.join(', ');
-        }
+        if (!d.tagsManual) autoFill();
       },
     });
     itemsArea.value = d.items || '';
@@ -826,27 +879,28 @@
       h(
         'div',
         { class: 'field span2' },
-        h('span', null, '유사 품목 태그 (쉼표로 구분)'),
+        h('span', null, '원재료 (쉼표로 구분) — 결과물이 달라도 원재료가 같으면 떨어뜨려요'),
+        tagInput,
+        h('span', null, '제품 형태 (쉼표로 구분) — 즙·청·떡·젓갈처럼 같은 형태끼리도 떨어뜨려요'),
+        formInput,
         h(
           'div',
           { class: 'row gap' },
-          tagInput,
+          tagNote,
           h(
             'button',
             {
               class: 'btn small',
               type: 'button',
               onclick: () => {
-                d.tags = FM.Sim.extractTags(d.items, App.settings());
+                autoFill();
                 d.tagsManual = false;
-                tagInput.value = d.tags.join(', ');
-                tagNote.textContent = '신청품목에서 자동으로 뽑은 태그예요.';
+                tagNote.textContent = '신청품목에서 자동으로 뽑았어요. 틀리면 고쳐 주세요.';
               },
             },
             '자동으로 다시 뽑기'
           )
-        ),
-        tagNote
+        )
       ),
       field('신규여부', 'isNew', { placeholder: 'ㅇ / ×' }),
       field('장소', 'place'),
@@ -879,7 +933,11 @@
     let m = null;
     const save = () => {
       if (!String(d.name).trim()) return UI.toast('농가명을 입력해 주세요.', 'warn');
-      if (!d.tagsManual) d.tags = FM.Sim.extractTags(d.items, App.settings());
+      if (!d.tagsManual) {
+        const x = FM.Sim.extract(d.items, App.settings());
+        d.tags = x.raw;
+        d.forms = x.forms;
+      }
       if (isNew) {
         const dup = ev.farms.find((f) => FM.isSameFarm(f, d));
         if (dup) UI.toast(`이미 비슷한 농가(${dup.name})가 있어요. 확인해 주세요.`, 'warn');
@@ -986,7 +1044,7 @@
       if (fromExcel) list = FM.Excel.rowsToFarms(opt.wbData.sheets[S.sheet].rows, S.headerRow, S.map, S.dayCols);
       else
         list = opt.fromEvent.farms.map((f, i) => ({
-          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, memo: f.memo, tags: f.tags, tagsManual: f.tagsManual },
+          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
           dayVals: {},
           rowNo: i + 1,
         }));
@@ -1276,16 +1334,16 @@
         if (c.existing) {
           touched.add(c.existing.id);
           if (S.dup === 'skip') continue;
-          for (const [k, v] of Object.entries(c.data)) if (v !== '' && v != null && k !== 'tags' && k !== 'tagsManual') c.existing[k] = v;
+          for (const [k, v] of Object.entries(c.data)) if (v !== '' && v != null && k !== 'tags' && k !== 'forms' && k !== 'tagsManual') c.existing[k] = v;
           for (const d of ev.days) if (dayVals[d.id]) c.existing.days[d.id] = true;
-          if (!c.existing.tagsManual) c.existing.tags = FM.Sim.extractTags(c.existing.items, st);
+          if (!c.existing.tagsManual) FM.Sim.refreshTags([c.existing], st);
           updated++;
         } else {
           const f = FM.newFarm(Object.assign({}, c.data));
           for (const d of ev.days) if (dayVals[d.id]) f.days[d.id] = true;
           if (!f.tagsManual || !Array.isArray(f.tags)) {
             f.tagsManual = false;
-            f.tags = FM.Sim.extractTags(f.items, st);
+            FM.Sim.refreshTags([f], st);
           }
           ev.farms.push(f);
           touched.add(f.id);
@@ -1469,13 +1527,26 @@
         h('h4', null, '① 참여 명단'),
         h('ul', null, h('li', null, '일정을 누르고 「📥 엑셀 명단 넣기」로 명단 엑셀을 넣어요. 「장소」 열이 있으면 해당 장소 농가만 골라 줘요.'), h('li', null, '날짜(토/일)별 체크로 참여 여부를 정해요. 취소된 농가는 체크를 풀고, 추가 농가는 「엑셀로 추가 명단 넣기」나 「농가 직접 추가」로 넣어요.')),
         h('h4', null, '② 칸 만들기'),
-        h('ul', null, h('li', null, '격자를 클릭·드래그해서 부스 칸을 만들어요. 한 칸 = 농가 한 곳.'), h('li', null, '위쪽 숫자가 「남은 칸 수」예요. 0이 되면 참여 농가 수와 딱 맞아요.'), h('li', null, '장소마다 모양이 다르니 한 번 만든 모양은 「장소 기본형으로 저장」해 두면 다음 일정에서 불러올 수 있어요.')),
+        h(
+          'ul',
+          null,
+          h('li', null, '격자를 클릭·드래그해서 부스 칸을 만들어요. 한 칸 = 농가 한 곳. 격자 끝까지 칠하면 자동으로 넓어져요.'),
+          h('li', null, '위쪽 숫자가 「남은 칸 수」예요. 0이 되면 참여 농가 수와 딱 맞아요.'),
+          h('li', null, '부스 앞면(손님 쪽) 방향 ▲▼◀▶ 은 자동으로 정해져요. 틀린 줄은 「➜ 방향」 붓으로 방향을 고르고 그 줄의 부스 하나만 클릭하면 줄 전체가 바뀌어요. 통로 건너 마주 보는 부스는 바로 옆처럼 떨어뜨려요.'),
+          h('li', null, '장소마다 모양이 다르니 한 번 만든 모양은 「장소 기본형으로 저장」해 두면 다음 일정에서 불러올 수 있어요.')
+        ),
         h('h4', null, '③ 농가 배치'),
         h('ul', null, h('li', null, '「⚡ 자동 배치」를 누르면 비슷한 품목끼리 붙지 않게 자동으로 놓아요. 누를 때마다 다른 배치안이 나와요.'), h('li', null, '꼭 정해진 자리가 있는 농가는 오른쪽 목록에서 검색 → 농가 클릭 → 칸 클릭하면 그 자리에 📌고정돼요. 고정된 농가는 자동 배치해도 안 움직여요.'), h('li', null, '칸을 끌어서 다른 칸에 놓으면 서로 자리가 바뀌어요. 잘못하면 「↶ 되돌리기」(Ctrl+Z).')),
         h('h4', null, '④ 검수'),
-        h('ul', null, h('li', null, '손으로 바꾼 뒤 「검수」를 보면 비슷한 품목이 가까이 붙은 곳을 선으로 이어 보여줘요. 선 색이 다르면 다른 품목이에요.'), h('li', null, '위험(빨강) = 같은 품목이 바로 옆, 주의(주황) = 같은 품목군이 바로 옆 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.')),
+        h(
+          'ul',
+          null,
+          h('li', null, '원재료가 같으면(사과↔사과즙, 참깨↔참기름, 포도↔와인) 결과물이 달라도 비슷한 품목으로 봐요. 즙·청·떡·젓갈처럼 같은 형태, 같은 품목군도 함께 봐요.'),
+          h('li', null, '가까이 붙거나 통로 건너 마주 보는 곳을 선으로 이어 보여줘요. 선 색이 다르면 다른 원재료·형태예요.'),
+          h('li', null, '위험(빨강) = 같은 원재료가 바로 옆·대각선·마주봄, 주의(주황) = 2칸 거리 등. 「🩹 문제 자리만 고치기」로 최소한만 옮겨 해결할 수 있어요.')
+        ),
         h('h4', null, '⑤ 저장·출력·공유'),
-        h('ul', null, h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요.'), h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')),
+        h('ul', null, h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요. 배치가 끝나면 배치 화면 위의 「🖼 그림 저장」으로 바로 저장해도 돼요.'), h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')),
         h('h4', null, '일정 바꾸기'),
         h('p', null, '처음 화면의 일정 카드 「⋯ → 일정 수정」에서 날짜를 바꾸거나 「앞에 금요일 추가」를 할 수 있어요. 새 일정은 「＋ 일정 추가」.'),
         h('p', { class: 'muted small' }, '버전: ' + (window.FM_BUILD || '개발용'))
@@ -1490,8 +1561,10 @@
     const draft = FM.clone(st);
     const venues = FM.clone(App.state.venues);
     let m = null;
-    const kw = h('textarea', { class: 'input mono', rows: 12, spellcheck: 'false' });
-    kw.value = draft.keywords;
+    const rawTa = h('textarea', { class: 'input mono', rows: 12, spellcheck: 'false' });
+    rawTa.value = draft.rawDict;
+    const formTa = h('textarea', { class: 'input mono', rows: 8, spellcheck: 'false' });
+    formTa.value = draft.formDict;
     const slider = (label, key, min, max, step, fmt) => {
       const out = h('b', null, fmt(draft[key]));
       return h(
@@ -1571,22 +1644,32 @@
     const body = h(
       'div',
       { class: 'settings' },
-      h('h4', null, '유사 품목 판단 기준'),
-      h('p', { class: 'muted small' }, '두 농가의 유사도 = (같은 품목군이면 +A) + (공통 품목 태그가 있으면 +B). 자동 배치는 「유사도 × 거리 가중치」의 합이 가장 작아지도록 배치해요.'),
-      h('div', { class: 'grid2' }, slider('A. 같은 품목군 가중치', 'wCat', 0, 1, 0.05, (v) => v.toFixed(2)), slider('B. 공통 품목 가중치', 'wTag', 0, 1, 0.05, (v) => v.toFixed(2))),
+      h('h4', null, '비슷한 품목 판단 기준'),
+      h(
+        'p',
+        { class: 'muted small' },
+        '두 농가의 유사도 = 같은 원재료(+A, 결과물이 달라도) + 같은 제품 형태(+B) + 같은 품목군(+C). 근접 위험도 = 유사도 × 거리(바로 옆·마주봄 1, 2칸 0.5 …). 자동 배치는 이 값이 큰 쌍부터 없애고, 남은 쌍도 최대한 멀리 떨어뜨려요.'
+      ),
+      h(
+        'div',
+        { class: 'grid3' },
+        slider('A. 같은 원재료', 'wRaw', 0, 1, 0.05, (v) => v.toFixed(2)),
+        slider('B. 같은 제품 형태', 'wForm', 0, 1, 0.05, (v) => v.toFixed(2)),
+        slider('C. 같은 품목군', 'wCat', 0, 1, 0.05, (v) => v.toFixed(2))
+      ),
       h(
         'div',
         { class: 'grid2' },
         sel(
-          '자동 배치가 살피는 거리',
+          '떨어뜨리는 거리 (자동 배치·검수가 살피는 범위)',
           'radius',
           [
-            [1, '바로 옆(상하좌우)만'],
-            [1.5, '대각선까지'],
-            [2.3, '한 칸 건너까지 (기본)'],
-            [3.2, '두 칸 건너까지'],
+            [2, '2칸까지'],
+            [4, '4칸까지'],
+            [6, '6칸까지 (기본)'],
+            [99, '배치도 전체'],
           ],
-          '멀리까지 살필수록 비슷한 품목이 더 넓게 흩어져요.'
+          '넓게 살필수록 같은 원재료 농가가 더 멀리 흩어져요.'
         ),
         sel(
           '위·아래 칸 거리',
@@ -1599,10 +1682,43 @@
           '줄 배치에서 위아래 칸이 서로 등을 맞대고 있다면 2배를 고르세요.'
         )
       ),
-      h('h4', null, '품목 키워드 사전'),
-      h('p', { class: 'muted small' }, '한 줄에 「그룹명: 키워드, 키워드」. 키워드가 신청품목에 들어 있으면 그 그룹 태그가 붙어요. ', h('code', null, '=배'), ' 정확히 일치 · ', h('code', null, '^묵'), ' ~로 시작 · ', h('code', null, '청$'), ' ~로 끝남 · ', h('code', null, '!김치'), ' 제외. 괄호 안 내용은 무시해요.'),
-      kw,
-      h('div', { class: 'row gap' }, h('button', { class: 'btn small', onclick: () => (kw.value = FM.DEFAULT_KEYWORDS) }, '기본 사전으로 되돌리기')),
+      h('h4', null, '원재료 사전'),
+      h(
+        'p',
+        { class: 'muted small' },
+        '한 줄에 「계열 > 원재료: 키워드, 키워드」. 신청품목 낱말에 키워드가 있으면 그 원재료로 봐요(괄호 안 재료 포함). 원재료 뒤 ',
+        h('code', null, '(0.5)'),
+        ' = 흔한 재료라 약하게, ',
+        h('code', null, '@계열: 0.4'),
+        ' = 원재료는 달라도 같은 계열이면 이만큼 비슷. 키워드: ',
+        h('code', null, '=배'),
+        ' 정확히 · ',
+        h('code', null, '^묵'),
+        ' ~로 시작 · ',
+        h('code', null, '청$'),
+        ' ~로 끝남 · ',
+        h('code', null, '!김치'),
+        ' 제외.'
+      ),
+      rawTa,
+      h('h4', null, '제품 형태 사전'),
+      h('p', { class: 'muted small' }, '한 줄에 「형태: 키워드, 키워드」. 원재료가 달라도 즙·청·떡·젓갈처럼 같은 형태면 손님이 겹친다고 봐요. 형태 뒤 (0.5) = 흔한 부가 상품이라 약하게.'),
+      formTa,
+      h(
+        'div',
+        { class: 'row gap' },
+        h(
+          'button',
+          {
+            class: 'btn small',
+            onclick: () => {
+              rawTa.value = FM.DEFAULT_RAW_DICT;
+              formTa.value = FM.DEFAULT_FORM_DICT;
+            },
+          },
+          '두 사전 모두 기본값으로 되돌리기'
+        )
+      ),
       h('h4', null, '장소'),
       venueBox,
       h('h4', null, '데이터'),
@@ -1657,15 +1773,16 @@
     );
 
     const save = () => {
-      const kwChanged = kw.value !== st.keywords;
-      draft.keywords = kw.value;
+      const kwChanged = rawTa.value !== st.rawDict || formTa.value !== st.formDict;
+      draft.rawDict = rawTa.value;
+      draft.formDict = formTa.value;
       Object.assign(st, draft);
       App.state.venues = venues.map((v) => Object.assign({}, v, { template: (App.state.venues.find((o) => o.id === v.id) || {}).template || null }));
       if (kwChanged) for (const ev of App.state.events) FM.Sim.refreshTags(ev.farms, st);
       m.close();
       App.changed();
       App.render();
-      UI.toast('설정을 저장했어요.' + (kwChanged ? ' 품목 태그를 다시 계산했어요.' : ''), 'ok');
+      UI.toast('설정을 저장했어요.' + (kwChanged ? ' 원재료·형태를 다시 계산했어요 (직접 고친 농가는 그대로).' : ''), 'ok');
     };
     m = UI.modal({
       title: '⚙ 설정',
@@ -1678,8 +1795,8 @@
           {
             class: 'btn ghost',
             onclick: () => {
-              const keep = draft.keywords;
-              Object.assign(draft, FM.clone(FM.DEFAULT_SETTINGS), { keywords: keep });
+              const keep = { rawDict: rawTa.value, formDict: formTa.value, zoom: draft.zoom, zoomEdit: draft.zoomEdit };
+              Object.assign(draft, FM.clone(FM.DEFAULT_SETTINGS), keep);
               m.close();
               Object.assign(st, draft);
               App.changed();

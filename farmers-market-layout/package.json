@@ -1,0 +1,9 @@
+{
+  "name": "farmers-market-layout",
+  "private": true,
+  "description": "농부의시장 농가 배치도 도우미 (HTML 파일 하나로 동작)",
+  "scripts": {
+    "build": "node tools/build.js",
+    "test": "node --test tests/logic.test.js"
+  }
+}

@@ -92,7 +92,8 @@
     heatmap: true,
     liveLines: false, // 배치 화면에서도 검수 선 표시
     autoPin: true, // 수동 배치·교체 시 자동 고정
-    zoom: 1,
+    zoom: 1, // ③ 배치·④ 검수 화면 배율
+    zoomEdit: 0.6, // ② 칸 만들기 화면 배율 (작게 보여서 넓은 격자를 한눈에)
     keywords: FM.DEFAULT_KEYWORDS,
   };
 
@@ -239,7 +240,9 @@
   //  layout= { rows, cols, cells: {"r,c": {t:'b'} | {t:'l', label}}, assign: {"r,c": farmId}, pins: {farmId:true}, numbering }
   //  farm  = { id, no, sido, sigungu, name, owner, phone, category, items, isNew, place, memo,
   //            tags[], tagsManual, days: {dayId: true} }
-  FM.emptyLayout = (rows, cols) => ({ rows: rows || 8, cols: cols || 14, cells: {}, assign: {}, pins: {}, numbering: 'row' });
+  // 격자 크기: 농가가 40곳을 넘는 경우가 많아 넉넉하게 시작 (20줄 × 30칸 = 600칸)
+  FM.GRID = { rows: 20, cols: 30, max: 100, margin: 3 };
+  FM.emptyLayout = (rows, cols) => ({ rows: rows || FM.GRID.rows, cols: cols || FM.GRID.cols, cells: {}, assign: {}, pins: {}, numbering: 'row' });
 
   FM.newDay = (date, round) => ({ id: FM.uid('d'), date, round: round || '', layout: FM.emptyLayout() });
 
@@ -299,6 +302,11 @@
         d.layout.cells = d.layout.cells || {};
         d.layout.assign = d.layout.assign || {};
         d.layout.pins = d.layout.pins || {};
+        // 아직 칸을 그리지 않은 예전의 작은 격자(8×14)는 넉넉한 기본 크기로 늘림
+        if (!Object.keys(d.layout.cells).length) {
+          d.layout.rows = Math.max(d.layout.rows, FM.GRID.rows);
+          d.layout.cols = Math.max(d.layout.cols, FM.GRID.cols);
+        }
       }
       ev.farms = ev.farms.map((f) => FM.newFarm(f));
       ev.days.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -407,6 +415,24 @@
       }
     }
   };
+  /** 칸이 아래·오른쪽 끝에 가까워지면 격자를 늘려 항상 여유 칸(margin)을 남김. 늘렸으면 true */
+  FM.ensureMargin = function (L, margin) {
+    const m = margin == null ? FM.GRID.margin : margin;
+    let maxR = -1;
+    let maxC = -1;
+    for (const k of Object.keys(L.cells)) {
+      const [r, c] = FM.parseKey(k);
+      if (r > maxR) maxR = r;
+      if (c > maxC) maxC = c;
+    }
+    const rows = Math.min(FM.GRID.max, Math.max(L.rows, maxR + 1 + m));
+    const cols = Math.min(FM.GRID.max, Math.max(L.cols, maxC + 1 + m));
+    const grew = rows !== L.rows || cols !== L.cols;
+    L.rows = rows;
+    L.cols = cols;
+    return grew;
+  };
+
   FM.farmCellMap = function (L) {
     const m = {};
     for (const [k, fid] of Object.entries(L.assign)) m[fid] = k;
@@ -454,8 +480,12 @@
       cols = w + 2;
       for (let r = 1; r <= hgt; r++) for (let c = 1; c <= w; c++) path.push([r, c]);
     }
+    // 위·왼쪽에 여유 2칸(입구·무대 표시용), 전체 격자는 기본 크기 이상으로 넉넉하게
+    const OFF = 1;
     const cells = {};
-    path.slice(0, n).forEach(([r, c]) => (cells[FM.cellKey(r, c)] = { t: 'b' }));
+    path.slice(0, n).forEach(([r, c]) => (cells[FM.cellKey(r + OFF, c + OFF)] = { t: 'b' }));
+    rows = Math.min(FM.GRID.max, Math.max(FM.GRID.rows, rows + OFF + FM.GRID.margin));
+    cols = Math.min(FM.GRID.max, Math.max(FM.GRID.cols, cols + OFF + FM.GRID.margin));
     return { rows, cols, cells };
   };
 

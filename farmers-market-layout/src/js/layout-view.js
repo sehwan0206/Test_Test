@@ -16,7 +16,10 @@
   const ui = () => FM.App.ui;
   const ST = () => FM.App.state.settings;
   const LY = () => C.day.layout;
-  const zoom = () => ST().zoom || 1;
+  // 칸 만들기 화면과 배치·검수 화면의 배율을 따로 기억
+  const zoomKey = () => (ui().mode === 'edit' ? 'zoomEdit' : 'zoom');
+  const zoom = () => ST()[zoomKey()] || (ui().mode === 'edit' ? 0.6 : 1);
+  const MAXG = () => FM.GRID.max;
   const CW = () => Math.round(96 * zoom());
   const CH = () => Math.round(62 * zoom());
   const cellX = (c) => PAD + c * (CW() + GAP);
@@ -93,17 +96,18 @@
   };
 
   function setZoom(d) {
-    ST().zoom = Math.max(0.5, Math.min(1.6, Math.round(((ST().zoom || 1) + d) * 10) / 10));
+    ST()[zoomKey()] = Math.max(0.35, Math.min(1.6, Math.round((zoom() + d) * 100) / 100));
     App().changed();
     App().render();
   }
   function fitZoom() {
     const L = LY();
     const b = FM.Excel.layoutBounds(L);
-    const cols = b ? b.maxC + 2 : L.cols;
+    // 칸 만들기: 격자 전체(또는 그린 부분 + 여유) / 배치·검수: 그린 부분
+    const cols = ui().mode === 'edit' ? (b ? Math.min(L.cols, b.maxC + 1 + FM.GRID.margin) : L.cols) : b ? b.maxC + 2 : L.cols;
     const avail = C.els.wrap.clientWidth - PAD * 2 - 6;
-    const z = Math.floor(((avail + GAP) / cols - GAP) / 96 * 10) / 10;
-    ST().zoom = Math.max(0.5, Math.min(1.6, z));
+    const z = Math.floor((((avail + GAP) / cols - GAP) / 96) * 100) / 100;
+    ST()[zoomKey()] = Math.max(0.35, Math.min(1.6, z));
     App().changed();
     App().render();
   }
@@ -250,7 +254,7 @@
     const grid = UI.clear(C.els.grid);
     const W = PAD * 2 + L.cols * (CW() + GAP) - GAP;
     const H = PAD * 2 + L.rows * (CH() + GAP) - GAP;
-    grid.className = 'lv-grid mode-' + mode;
+    grid.className = 'lv-grid mode-' + mode + (zoom() < 0.5 ? ' tiny' : '');
     grid.style.width = W + 'px';
     grid.style.height = H + 'px';
     grid.style.setProperty('--z', zoom());
@@ -408,6 +412,8 @@
       grid.removeEventListener('pointermove', move);
       grid.removeEventListener('pointerup', up);
       grid.removeEventListener('pointercancel', up);
+      // 가장자리까지 칠하면 격자를 자동으로 늘림
+      if (FM.ensureMargin(L)) UI.toast(`격자를 넓혔어요 (${L.rows}줄 × ${L.cols}칸)`);
       changed();
     };
     grid.addEventListener('pointermove', move);
@@ -771,7 +777,7 @@
               ),
               h('p', { class: 'muted small' }, '무대·입구 같은 시설은 부스 수에 들어가지 않아요. 위치를 알아보기 쉽게 표시만 해요.')
             )
-          : h('p', { class: 'muted small' }, u.brush === 'b' ? '빈 격자를 누르면 부스 칸이 생기고, 부스 칸을 다시 누르면 지워져요. 누른 채로 끌면 여러 칸을 한 번에 칠해요.' : '누르거나 끌어서 칸을 지워요.')
+          : h('p', { class: 'muted small' }, u.brush === 'b' ? '빈 격자를 누르면 부스 칸이 생기고, 부스 칸을 다시 누르면 지워져요. 누른 채로 끌면 여러 칸을 한 번에 칠해요. 오른쪽·아래 끝까지 칠하면 격자가 자동으로 늘어나요.' : '누르거나 끌어서 칸을 지워요.')
       )
     );
 
@@ -810,7 +816,7 @@
                 if (Object.keys(L.cells).length && !(await UI.confirm('지금 칸을 지우고 새 모양으로 만들까요?', { okText: '새로 만들기' }))) return;
                 pushHistory();
                 const g = FM.generateShape(u.shapeKind, n, u.shapeLines);
-                Object.assign(L, { rows: g.rows, cols: g.cols, cells: g.cells, assign: {}, pins: {} });
+                Object.assign(L, { rows: Math.max(L.rows, g.rows), cols: Math.max(L.cols, g.cols), cells: g.cells, assign: {}, pins: {} });
                 changed();
               },
             },
@@ -821,8 +827,14 @@
       )
     );
 
-    const rIn = h('input', { class: 'input num', type: 'number', min: 1, max: 60, value: L.rows });
-    const cIn = h('input', { class: 'input num', type: 'number', min: 1, max: 60, value: L.cols });
+    const rIn = h('input', { class: 'input num', type: 'number', min: 1, max: MAXG(), value: L.rows });
+    const cIn = h('input', { class: 'input num', type: 'number', min: 1, max: MAXG(), value: L.cols });
+    const grow = (dr, dc) => {
+      pushHistory();
+      L.rows = Math.min(MAXG(), L.rows + dr);
+      L.cols = Math.min(MAXG(), L.cols + dc);
+      changed();
+    };
     const shift = (dr, dc) => {
       pushHistory();
       shiftLayout(L, dr, dc);
@@ -841,8 +853,8 @@
             {
               class: 'btn small',
               onclick: () => {
-                const r = Math.max(1, Math.min(60, +rIn.value || L.rows));
-                const c = Math.max(1, Math.min(60, +cIn.value || L.cols));
+                const r = Math.max(1, Math.min(MAXG(), +rIn.value || L.rows));
+                const c = Math.max(1, Math.min(MAXG(), +cIn.value || L.cols));
                 pushHistory();
                 L.rows = r;
                 L.cols = c;
@@ -855,32 +867,10 @@
         h(
           'div',
           { class: 'row gap wrap' },
-          h('button', { class: 'btn small', onclick: () => shift(1, 0) }, '＋ 위에 한 줄'),
-          h(
-            'button',
-            {
-              class: 'btn small',
-              onclick: () => {
-                pushHistory();
-                L.rows = Math.min(60, L.rows + 1);
-                changed();
-              },
-            },
-            '＋ 아래 한 줄'
-          ),
-          h('button', { class: 'btn small', onclick: () => shift(0, 1) }, '＋ 왼쪽 한 칸'),
-          h(
-            'button',
-            {
-              class: 'btn small',
-              onclick: () => {
-                pushHistory();
-                L.cols = Math.min(60, L.cols + 1);
-                changed();
-              },
-            },
-            '＋ 오른쪽 한 칸'
-          ),
+          h('button', { class: 'btn small', onclick: () => shift(5, 0) }, '＋ 위 5줄'),
+          h('button', { class: 'btn small', onclick: () => grow(5, 0) }, '＋ 아래 5줄'),
+          h('button', { class: 'btn small', onclick: () => shift(0, 5) }, '＋ 왼쪽 5칸'),
+          h('button', { class: 'btn small', onclick: () => grow(0, 5) }, '＋ 오른쪽 5칸'),
           h(
             'button',
             {
@@ -891,9 +881,10 @@
                 changed();
               },
             },
-            '빈 테두리 정리'
+            '빈 테두리 줄이기'
           )
-        )
+        ),
+        h('p', { class: 'muted small' }, `지금 ${L.rows}줄 × ${L.cols}칸 = ${L.rows * L.cols}칸 (최대 ${MAXG()}×${MAXG()})`)
       )
     );
 
@@ -1005,15 +996,16 @@
     }
     L.cells = cells;
     L.assign = assign;
-    L.rows = Math.min(60, L.rows + dr);
-    L.cols = Math.min(60, L.cols + dc);
+    L.rows = Math.min(MAXG(), L.rows + dr);
+    L.cols = Math.min(MAXG(), L.cols + dc);
   }
   function trimLayout(L) {
     const b = FM.Excel.layoutBounds(L);
     if (!b) return;
-    shiftLayout(L, 1 - b.minR, 1 - b.minC);
-    L.rows = b.maxR - b.minR + 3;
-    L.cols = b.maxC - b.minC + 3;
+    // 위·왼쪽 2칸, 아래·오른쪽 3칸 여유만 남기고 줄임
+    shiftLayout(L, 2 - b.minR, 2 - b.minC);
+    L.rows = b.maxR - b.minR + 1 + 2 + FM.GRID.margin;
+    L.cols = b.maxC - b.minC + 1 + 2 + FM.GRID.margin;
   }
 
   // ---------------------------------------------------------- ③ 농가 배치 ---

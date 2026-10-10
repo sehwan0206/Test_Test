@@ -157,3 +157,26 @@ test('기본 일정은 사진 일정표와 같고 모두 토·일이다', () => 
   assert.deepStrictEqual(byVenue('hwarangdae'), ['2026-10-17~2026-10-18', '2026-11-07~2026-11-08']);
   for (const e of st.events) assert.deepStrictEqual(e.days.map((d) => FM.weekday(d.date)), ['토', '일']);
 });
+
+test('격자는 넉넉하게: 기본 600칸, 예전 작은 빈 격자는 자동으로 늘어나고, 끝까지 칠하면 늘어난다', () => {
+  const L = FM.emptyLayout();
+  assert.ok(L.rows * L.cols >= 600, `${L.rows}×${L.cols}`);
+  const st = FM.createDefaultState();
+  st.events[0].days[0].layout = { rows: 8, cols: 14, cells: {}, assign: {}, pins: {} };
+  const kept = { rows: 8, cols: 14, cells: { '1,1': { t: 'b' } }, assign: {}, pins: {} };
+  st.events[0].days[1].layout = kept;
+  FM.normalizeState(st);
+  assert.deepStrictEqual([st.events[0].days[0].layout.rows, st.events[0].days[0].layout.cols], [FM.GRID.rows, FM.GRID.cols]);
+  assert.deepStrictEqual([kept.rows, kept.cols], [8, 14]); // 이미 그린 격자는 그대로
+  const E = FM.emptyLayout();
+  E.cells[FM.cellKey(E.rows - 1, E.cols - 1)] = { t: 'b' };
+  assert.strictEqual(FM.ensureMargin(E), true);
+  assert.strictEqual(E.rows, FM.GRID.rows + FM.GRID.margin);
+  assert.strictEqual(E.cols, FM.GRID.cols + FM.GRID.margin);
+  for (const shape of ['lines', 'u', 'ring', 'block']) {
+    const g = FM.generateShape(shape, 45, 2);
+    assert.ok(g.rows >= FM.GRID.rows && g.cols >= FM.GRID.cols, shape);
+  }
+  const big = FM.generateShape('lines', 120, 2); // 한 줄 60칸 → 격자도 그만큼 넓어짐
+  assert.ok(big.cols >= 60 + 2 + FM.GRID.margin);
+});

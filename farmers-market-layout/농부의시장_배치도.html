@@ -428,10 +428,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   .export-grid { grid-template-columns: 1fr; }
 }
 .popmenu-item small { margin-left: auto; color: var(--muted); font-size: .74rem; }
+.lv-grid.tiny .cell .cempty, .lv-grid.tiny .cell .ccat { display: none; }
+.lv-grid.tiny .cell .cname { margin-top: 4px; -webkit-line-clamp: 1; }
 
 </style>
-<meta name="generator" content="농부의시장 배치도 도우미 2026.10.10 03:05">
-<script>window.FM_BUILD = "2026.10.10 03:05";</script>
+<meta name="generator" content="농부의시장 배치도 도우미 2026.10.10 03:22">
+<script>window.FM_BUILD = "2026.10.10 03:22";</script>
 </head>
 <body>
 <header id="topbar" class="topbar"></header>
@@ -611,7 +613,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     heatmap: true,
     liveLines: false, // 배치 화면에서도 검수 선 표시
     autoPin: true, // 수동 배치·교체 시 자동 고정
-    zoom: 1,
+    zoom: 1, // ③ 배치·④ 검수 화면 배율
+    zoomEdit: 0.6, // ② 칸 만들기 화면 배율 (작게 보여서 넓은 격자를 한눈에)
     keywords: FM.DEFAULT_KEYWORDS,
   };
 
@@ -758,7 +761,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   //  layout= { rows, cols, cells: {"r,c": {t:'b'} | {t:'l', label}}, assign: {"r,c": farmId}, pins: {farmId:true}, numbering }
   //  farm  = { id, no, sido, sigungu, name, owner, phone, category, items, isNew, place, memo,
   //            tags[], tagsManual, days: {dayId: true} }
-  FM.emptyLayout = (rows, cols) => ({ rows: rows || 8, cols: cols || 14, cells: {}, assign: {}, pins: {}, numbering: 'row' });
+  // 격자 크기: 농가가 40곳을 넘는 경우가 많아 넉넉하게 시작 (20줄 × 30칸 = 600칸)
+  FM.GRID = { rows: 20, cols: 30, max: 100, margin: 3 };
+  FM.emptyLayout = (rows, cols) => ({ rows: rows || FM.GRID.rows, cols: cols || FM.GRID.cols, cells: {}, assign: {}, pins: {}, numbering: 'row' });
 
   FM.newDay = (date, round) => ({ id: FM.uid('d'), date, round: round || '', layout: FM.emptyLayout() });
 
@@ -818,6 +823,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         d.layout.cells = d.layout.cells || {};
         d.layout.assign = d.layout.assign || {};
         d.layout.pins = d.layout.pins || {};
+        // 아직 칸을 그리지 않은 예전의 작은 격자(8×14)는 넉넉한 기본 크기로 늘림
+        if (!Object.keys(d.layout.cells).length) {
+          d.layout.rows = Math.max(d.layout.rows, FM.GRID.rows);
+          d.layout.cols = Math.max(d.layout.cols, FM.GRID.cols);
+        }
       }
       ev.farms = ev.farms.map((f) => FM.newFarm(f));
       ev.days.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -926,6 +936,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }
     }
   };
+  /** 칸이 아래·오른쪽 끝에 가까워지면 격자를 늘려 항상 여유 칸(margin)을 남김. 늘렸으면 true */
+  FM.ensureMargin = function (L, margin) {
+    const m = margin == null ? FM.GRID.margin : margin;
+    let maxR = -1;
+    let maxC = -1;
+    for (const k of Object.keys(L.cells)) {
+      const [r, c] = FM.parseKey(k);
+      if (r > maxR) maxR = r;
+      if (c > maxC) maxC = c;
+    }
+    const rows = Math.min(FM.GRID.max, Math.max(L.rows, maxR + 1 + m));
+    const cols = Math.min(FM.GRID.max, Math.max(L.cols, maxC + 1 + m));
+    const grew = rows !== L.rows || cols !== L.cols;
+    L.rows = rows;
+    L.cols = cols;
+    return grew;
+  };
+
   FM.farmCellMap = function (L) {
     const m = {};
     for (const [k, fid] of Object.entries(L.assign)) m[fid] = k;
@@ -973,8 +1001,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       cols = w + 2;
       for (let r = 1; r <= hgt; r++) for (let c = 1; c <= w; c++) path.push([r, c]);
     }
+    // 위·왼쪽에 여유 2칸(입구·무대 표시용), 전체 격자는 기본 크기 이상으로 넉넉하게
+    const OFF = 1;
     const cells = {};
-    path.slice(0, n).forEach(([r, c]) => (cells[FM.cellKey(r, c)] = { t: 'b' }));
+    path.slice(0, n).forEach(([r, c]) => (cells[FM.cellKey(r + OFF, c + OFF)] = { t: 'b' }));
+    rows = Math.min(FM.GRID.max, Math.max(FM.GRID.rows, rows + OFF + FM.GRID.margin));
+    cols = Math.min(FM.GRID.max, Math.max(FM.GRID.cols, cols + OFF + FM.GRID.margin));
     return { rows, cols, cells };
   };
 
@@ -2364,7 +2396,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const ui = () => FM.App.ui;
   const ST = () => FM.App.state.settings;
   const LY = () => C.day.layout;
-  const zoom = () => ST().zoom || 1;
+  // 칸 만들기 화면과 배치·검수 화면의 배율을 따로 기억
+  const zoomKey = () => (ui().mode === 'edit' ? 'zoomEdit' : 'zoom');
+  const zoom = () => ST()[zoomKey()] || (ui().mode === 'edit' ? 0.6 : 1);
+  const MAXG = () => FM.GRID.max;
   const CW = () => Math.round(96 * zoom());
   const CH = () => Math.round(62 * zoom());
   const cellX = (c) => PAD + c * (CW() + GAP);
@@ -2441,17 +2476,18 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   };
 
   function setZoom(d) {
-    ST().zoom = Math.max(0.5, Math.min(1.6, Math.round(((ST().zoom || 1) + d) * 10) / 10));
+    ST()[zoomKey()] = Math.max(0.35, Math.min(1.6, Math.round((zoom() + d) * 100) / 100));
     App().changed();
     App().render();
   }
   function fitZoom() {
     const L = LY();
     const b = FM.Excel.layoutBounds(L);
-    const cols = b ? b.maxC + 2 : L.cols;
+    // 칸 만들기: 격자 전체(또는 그린 부분 + 여유) / 배치·검수: 그린 부분
+    const cols = ui().mode === 'edit' ? (b ? Math.min(L.cols, b.maxC + 1 + FM.GRID.margin) : L.cols) : b ? b.maxC + 2 : L.cols;
     const avail = C.els.wrap.clientWidth - PAD * 2 - 6;
-    const z = Math.floor(((avail + GAP) / cols - GAP) / 96 * 10) / 10;
-    ST().zoom = Math.max(0.5, Math.min(1.6, z));
+    const z = Math.floor((((avail + GAP) / cols - GAP) / 96) * 100) / 100;
+    ST()[zoomKey()] = Math.max(0.35, Math.min(1.6, z));
     App().changed();
     App().render();
   }
@@ -2598,7 +2634,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const grid = UI.clear(C.els.grid);
     const W = PAD * 2 + L.cols * (CW() + GAP) - GAP;
     const H = PAD * 2 + L.rows * (CH() + GAP) - GAP;
-    grid.className = 'lv-grid mode-' + mode;
+    grid.className = 'lv-grid mode-' + mode + (zoom() < 0.5 ? ' tiny' : '');
     grid.style.width = W + 'px';
     grid.style.height = H + 'px';
     grid.style.setProperty('--z', zoom());
@@ -2756,6 +2792,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       grid.removeEventListener('pointermove', move);
       grid.removeEventListener('pointerup', up);
       grid.removeEventListener('pointercancel', up);
+      // 가장자리까지 칠하면 격자를 자동으로 늘림
+      if (FM.ensureMargin(L)) UI.toast(`격자를 넓혔어요 (${L.rows}줄 × ${L.cols}칸)`);
       changed();
     };
     grid.addEventListener('pointermove', move);
@@ -3119,7 +3157,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
               ),
               h('p', { class: 'muted small' }, '무대·입구 같은 시설은 부스 수에 들어가지 않아요. 위치를 알아보기 쉽게 표시만 해요.')
             )
-          : h('p', { class: 'muted small' }, u.brush === 'b' ? '빈 격자를 누르면 부스 칸이 생기고, 부스 칸을 다시 누르면 지워져요. 누른 채로 끌면 여러 칸을 한 번에 칠해요.' : '누르거나 끌어서 칸을 지워요.')
+          : h('p', { class: 'muted small' }, u.brush === 'b' ? '빈 격자를 누르면 부스 칸이 생기고, 부스 칸을 다시 누르면 지워져요. 누른 채로 끌면 여러 칸을 한 번에 칠해요. 오른쪽·아래 끝까지 칠하면 격자가 자동으로 늘어나요.' : '누르거나 끌어서 칸을 지워요.')
       )
     );
 
@@ -3158,7 +3196,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 if (Object.keys(L.cells).length && !(await UI.confirm('지금 칸을 지우고 새 모양으로 만들까요?', { okText: '새로 만들기' }))) return;
                 pushHistory();
                 const g = FM.generateShape(u.shapeKind, n, u.shapeLines);
-                Object.assign(L, { rows: g.rows, cols: g.cols, cells: g.cells, assign: {}, pins: {} });
+                Object.assign(L, { rows: Math.max(L.rows, g.rows), cols: Math.max(L.cols, g.cols), cells: g.cells, assign: {}, pins: {} });
                 changed();
               },
             },
@@ -3169,8 +3207,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       )
     );
 
-    const rIn = h('input', { class: 'input num', type: 'number', min: 1, max: 60, value: L.rows });
-    const cIn = h('input', { class: 'input num', type: 'number', min: 1, max: 60, value: L.cols });
+    const rIn = h('input', { class: 'input num', type: 'number', min: 1, max: MAXG(), value: L.rows });
+    const cIn = h('input', { class: 'input num', type: 'number', min: 1, max: MAXG(), value: L.cols });
+    const grow = (dr, dc) => {
+      pushHistory();
+      L.rows = Math.min(MAXG(), L.rows + dr);
+      L.cols = Math.min(MAXG(), L.cols + dc);
+      changed();
+    };
     const shift = (dr, dc) => {
       pushHistory();
       shiftLayout(L, dr, dc);
@@ -3189,8 +3233,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             {
               class: 'btn small',
               onclick: () => {
-                const r = Math.max(1, Math.min(60, +rIn.value || L.rows));
-                const c = Math.max(1, Math.min(60, +cIn.value || L.cols));
+                const r = Math.max(1, Math.min(MAXG(), +rIn.value || L.rows));
+                const c = Math.max(1, Math.min(MAXG(), +cIn.value || L.cols));
                 pushHistory();
                 L.rows = r;
                 L.cols = c;
@@ -3203,32 +3247,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         h(
           'div',
           { class: 'row gap wrap' },
-          h('button', { class: 'btn small', onclick: () => shift(1, 0) }, '＋ 위에 한 줄'),
-          h(
-            'button',
-            {
-              class: 'btn small',
-              onclick: () => {
-                pushHistory();
-                L.rows = Math.min(60, L.rows + 1);
-                changed();
-              },
-            },
-            '＋ 아래 한 줄'
-          ),
-          h('button', { class: 'btn small', onclick: () => shift(0, 1) }, '＋ 왼쪽 한 칸'),
-          h(
-            'button',
-            {
-              class: 'btn small',
-              onclick: () => {
-                pushHistory();
-                L.cols = Math.min(60, L.cols + 1);
-                changed();
-              },
-            },
-            '＋ 오른쪽 한 칸'
-          ),
+          h('button', { class: 'btn small', onclick: () => shift(5, 0) }, '＋ 위 5줄'),
+          h('button', { class: 'btn small', onclick: () => grow(5, 0) }, '＋ 아래 5줄'),
+          h('button', { class: 'btn small', onclick: () => shift(0, 5) }, '＋ 왼쪽 5칸'),
+          h('button', { class: 'btn small', onclick: () => grow(0, 5) }, '＋ 오른쪽 5칸'),
           h(
             'button',
             {
@@ -3239,9 +3261,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
                 changed();
               },
             },
-            '빈 테두리 정리'
+            '빈 테두리 줄이기'
           )
-        )
+        ),
+        h('p', { class: 'muted small' }, `지금 ${L.rows}줄 × ${L.cols}칸 = ${L.rows * L.cols}칸 (최대 ${MAXG()}×${MAXG()})`)
       )
     );
 
@@ -3353,15 +3376,16 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
     L.cells = cells;
     L.assign = assign;
-    L.rows = Math.min(60, L.rows + dr);
-    L.cols = Math.min(60, L.cols + dc);
+    L.rows = Math.min(MAXG(), L.rows + dr);
+    L.cols = Math.min(MAXG(), L.cols + dc);
   }
   function trimLayout(L) {
     const b = FM.Excel.layoutBounds(L);
     if (!b) return;
-    shiftLayout(L, 1 - b.minR, 1 - b.minC);
-    L.rows = b.maxR - b.minR + 3;
-    L.cols = b.maxC - b.minC + 3;
+    // 위·왼쪽 2칸, 아래·오른쪽 3칸 여유만 남기고 줄임
+    shiftLayout(L, 2 - b.minR, 2 - b.minC);
+    L.rows = b.maxR - b.minR + 1 + 2 + FM.GRID.margin;
+    L.cols = b.maxC - b.minC + 1 + 2 + FM.GRID.margin;
   }
 
   // ---------------------------------------------------------- ③ 농가 배치 ---

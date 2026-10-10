@@ -420,3 +420,5 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   .export-grid { grid-template-columns: 1fr; }
 }
 .popmenu-item small { margin-left: auto; color: var(--muted); font-size: .74rem; }
+.lv-grid.tiny .cell .cempty, .lv-grid.tiny .cell .ccat { display: none; }
+.lv-grid.tiny .cell .cname { margin-top: 4px; -webkit-line-clamp: 1; }

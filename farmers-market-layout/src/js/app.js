@@ -947,6 +947,12 @@
       ),
       field('신규여부', 'isNew', { placeholder: 'ㅇ / ×' }),
       field('장소', 'place'),
+      h(
+        'label',
+        { class: 'field', title: '게시용 배치도 그림에 보일 짧은 이름. 비우면 농가명에서 자동으로 만들어요.' },
+        h('span', null, '🖼 배치도에 보일 이름'),
+        h('input', { class: 'input', value: d.alias || '', placeholder: '비우면 자동: ' + FM.displayName(Object.assign({}, d, { alias: '' })), oninput: (e) => (d.alias = e.target.value.trim()) })
+      ),
       h('label', { class: 'field span2' }, h('span', null, '비고'), h('input', { class: 'input', value: d.memo || '', oninput: (e) => (d.memo = e.target.value) })),
       h(
         'div',
@@ -1087,7 +1093,7 @@
       if (fromExcel) list = FM.Excel.rowsToFarms(opt.wbData.sheets[S.sheet].rows, S.headerRow, S.map, S.dayCols);
       else
         list = opt.fromEvent.farms.map((f, i) => ({
-          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, power: f.power, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
+          data: { no: f.no, sido: f.sido, sigungu: f.sigungu, name: f.name, alias: f.alias, owner: f.owner, phone: f.phone, category: f.category, items: f.items, isNew: f.isNew, place: f.place, power: f.power, memo: f.memo, tags: f.tags, forms: f.forms, tagsManual: f.tagsManual },
           dayVals: {},
           rowNo: i + 1,
         }));
@@ -1431,9 +1437,15 @@
         ]),
         card(
           '🖼',
-          '배치도 그림(PNG) 저장',
-          '카톡이나 문자로 보내기 좋은 그림 파일이에요. 날짜마다 따로 저장돼요.',
-          ev.days.map((d) => h('button', { class: 'btn', onclick: () => exportPng(ev, d, base, false) }, `🖼 ${FM.weekday(d.date)} ${FM.fmtDay(d.date)}`)).concat(
+          '배치도 그림 만들기 (게시용)',
+          '맨 위 제목, 배치 모양 그대로 상호명(세로 글씨), 줄마다 다른 색, 부스 번호가 들어간 흰 바탕 그림이에요. 미리 보면서 제목·색·방향 표시를 고르고 PNG로 저장해요.',
+          ev.days.map((d) => h('button', { class: 'btn primary', onclick: () => FM.Poster.open(ev, d) }, `🖼 ${FM.weekday(d.date)} ${FM.fmtDay(d.date)}`))
+        ),
+        card(
+          '🔍',
+          '검수용 그림(PNG) 저장',
+          '품목군 색·부스 방향·전력 구역이 표시된 확인용 그림이에요. 「검수 선 포함」은 가까운 유사 품목을 선으로 이어 보여줘요.',
+          ev.days.map((d) => h('button', { class: 'btn', onclick: () => exportPng(ev, d, base, false) }, `🔍 ${FM.weekday(d.date)} ${FM.fmtDay(d.date)}`)).concat(
             ev.days.map((d) => h('button', { class: 'btn ghost small', onclick: () => exportPng(ev, d, base, true) }, `검수 선 포함 ${FM.weekday(d.date)}`))
           )
         ),
@@ -1464,7 +1476,7 @@
 
   function exportPng(ev, day, base, showLines) {
     const cv = FM.Excel.renderLayoutCanvas({ ev, day, venue: App.venue(ev.venueId), settings: App.settings(), showLines });
-    cv.toBlob((blob) => UI.download(blob, `${base}_${FM.fmtDay(day.date).replace(/[().]/g, '')}${showLines ? '_검수' : ''}_배치도.png`), 'image/png');
+    cv.toBlob((blob) => UI.download(blob, `${base}_${FM.fmtDay(day.date).replace(/[().]/g, '')}_검수용${showLines ? '_선포함' : ''}.png`), 'image/png');
   }
   App.exportPng = exportPng;
 
@@ -1592,7 +1604,14 @@
           h('li', null, '⚡ 전력 분산: 구역별 kW 합계와 목표·용량을 막대로 보여주고, 전력 큰 농가끼리 붙은 곳을 알려줘요. 자동 배치는 전력까지 함께 맞춰요.')
         ),
         h('h4', null, '⑤ 저장·출력·공유'),
-        h('ul', null, h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요. 배치가 끝나면 배치 화면 위의 「🖼 그림 저장」으로 바로 저장해도 돼요.'), h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')),
+        h(
+          'ul',
+          null,
+          h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요.'),
+          h('li', null, '🖼 배치도 그림 만들기(게시용): 맨 위 제목을 직접 적고, 배치 모양 그대로 상호명(세로 글씨)·줄마다 다른 색·상호명에 붙은 부스 번호가 들어간 흰 바탕 그림을 만들어요. 「한강방향 🌉」 같은 방향 표시 띠도 넣을 수 있고(장소마다 기억), 그림에 보일 이름은 창 아래 「✏️ 그림에 보일 이름 고치기」나 농가 수정 창에서 고쳐요.'),
+          h('li', null, '🔍 검수용 그림: 품목군 색·부스 방향·전력 구역·검수 선이 들어간 확인용 그림이에요.'),
+          h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')
+        ),
         h('h4', null, '일정 바꾸기'),
         h('p', null, '처음 화면의 일정 카드 「⋯ → 일정 수정」에서 날짜를 바꾸거나 「앞에 금요일 추가」를 할 수 있어요. 새 일정은 「＋ 일정 추가」.'),
         h('p', { class: 'muted small' }, '버전: ' + (window.FM_BUILD || '개발용'))

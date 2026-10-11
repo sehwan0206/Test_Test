@@ -11,6 +11,7 @@ require(js('similarity.js'));
 require(js('optimizer.js'));
 require(js('power.js'));
 require(js('sample-data.js'));
+require(js('poster.js'));
 const FM = globalThis.FM;
 const ST = FM.clone(FM.DEFAULT_SETTINGS);
 
@@ -338,4 +339,94 @@ test('전력 검수: 발전기 용량을 넘으면 알려준다', () => {
   assert.strictEqual(over.level, 'danger');
   L.genCap = pr.total + 5;
   assert.strictEqual(FM.Power.report(L, byId, st).genOver, false);
+});
+
+// ---------------------------------------------------------- 게시용 배치도 그림 ---
+test('배치도 표시 이름: 직접 적은 이름 > 괄호 안 상호 > 법인 표기 뺀 이름', () => {
+  assert.strictEqual(FM.displayName({ name: '한빛인터내셔널(들꽃향기)' }), '들꽃향기');
+  assert.strictEqual(FM.displayName({ name: '산골잡곡 (보리정미소)' }), '보리정미소');
+  assert.strictEqual(FM.displayName({ name: '한빛인터내셔널(들꽃향기)' }, false), '한빛인터내셔널(들꽃향기)');
+  assert.strictEqual(FM.displayName({ name: '농업회사법인 햇살농원(주)' }), '햇살농원');
+  assert.strictEqual(FM.displayName({ name: '햇살농원(홍)' }), '햇살농원(홍)'); // 한 글자는 상호로 보지 않음
+  assert.strictEqual(FM.displayName({ name: '한빛인터내셔널(들꽃향기)', alias: ' 들꽃향기농장 ' }), '들꽃향기농장');
+  // 저장된 예전 데이터에도 alias 칸이 생긴다
+  const st = FM.normalizeState({ events: [{ id: 'e', days: [], farms: [{ id: 'f', name: 'x' }] }] });
+  assert.strictEqual(st.events[0].farms[0].alias, '');
+});
+
+test('부스 번호 순서: 가로→ · 가로← · 지그재그 · 세로↓ · 세로↓(오른쪽부터)', () => {
+  const L = FM.emptyLayout(6, 6);
+  for (const r of [1, 3]) for (const c of [1, 2, 3]) L.cells[FM.cellKey(r, c)] = { t: 'b' };
+  const order = (mode) => {
+    L.numbering = mode;
+    return FM.boothKeys(L).join(' ');
+  };
+  assert.strictEqual(order('row'), '1,1 1,2 1,3 3,1 3,2 3,3');
+  assert.strictEqual(order('rowR'), '1,3 1,2 1,1 3,3 3,2 3,1');
+  assert.strictEqual(order('snake'), '1,1 1,2 1,3 3,3 3,2 3,1');
+  assert.strictEqual(order('col'), '1,1 3,1 1,2 3,2 1,3 3,3');
+  assert.strictEqual(order('colR'), '1,3 3,3 1,2 3,2 1,1 3,1');
+  assert.strictEqual(FM.NUMBERING.length, 5);
+});
+
+test('그림 칸 배치: 3줄 배치는 세로 글씨 · 통로는 좁게 · 줄마다 색이 번갈아', () => {
+  const L = FM.emptyLayout();
+  Object.assign(L, FM.generateShape('lines', 30, 3)); // 1줄 · 통로 · 2줄(등 맞댐)
+  const farms = FM.SAMPLE_FARMS.slice(0, 30).map((s, i) => ({ id: 'f' + i, name: s[0], category: s[4] }));
+  FM.boothKeys(L).forEach((k, i) => (L.assign[k] = farms[i].id));
+  const byId = Object.fromEntries(farms.map((f) => [f.id, f]));
+  const m = FM.Poster.model(L, byId, {});
+  assert.strictEqual(m.text, 'v');
+  assert.strictEqual(m.booths, 30);
+  assert.strictEqual(m.placed, 30);
+  assert.strictEqual(m.lines, 3);
+  const rows = [...new Set(m.items.map((it) => it.r))].sort((a, b) => a - b);
+  assert.strictEqual(rows.length, 3);
+  const aisleRow = rows[0] + 1;
+  assert.strictEqual(m.rowH[rows[0]], m.ch);
+  assert.ok(m.rowH[aisleRow] < m.ch / 2, '빈 줄은 좁은 통로');
+  const colors = FM.Poster.colorsOf(FM.Poster.DEFAULTS);
+  const fillOf = (r) => m.items.find((it) => it.r === r).fill;
+  assert.deepStrictEqual(rows.map(fillOf), [colors[0], colors[1], colors[0]]);
+  // 번호는 칸마다 붙고, 이름은 표시 이름
+  const first = m.items.find((it) => it.key === FM.boothKeys(L)[0]);
+  assert.strictEqual(first.no, 1);
+  assert.strictEqual(first.name, farms[0].name);
+  // 같은 줄은 같은 높이, 칸 사이 간격은 일정
+  const r0 = m.items.filter((it) => it.r === rows[0]).sort((a, b) => a.c - b.c);
+  assert.ok(r0.every((it, i) => i === 0 || it.x - r0[i - 1].x === m.cw + m.gap));
+});
+
+test('그림 칸 배치: ㄷ자의 옆줄은 넓고 낮은 가로 글씨 칸, 줄 색은 위·옆·아래로 번갈아', () => {
+  const L = FM.emptyLayout();
+  Object.assign(L, FM.generateShape('u', 30));
+  const m = FM.Poster.model(L, {}, {});
+  assert.strictEqual(m.text, 'v');
+  const sides = m.items.filter((it) => it.side);
+  assert.ok(sides.length >= 3, '옆줄 부스가 있다');
+  assert.ok(sides.every((it) => it.dir === 'h' && it.w === m.sideW && it.h === m.sideH));
+  const tops = m.items.filter((it) => !it.side);
+  assert.ok(tops.every((it) => it.dir === 'v' && it.h === m.ch));
+  assert.strictEqual(m.lines, 3);
+  const minR = Math.min(...m.items.map((it) => it.r));
+  const maxR = Math.max(...m.items.map((it) => it.r));
+  const lineAt = (r) => m.items.find((it) => it.r === r && !it.side).line;
+  assert.deepStrictEqual([lineAt(minR), sides[0].line, lineAt(maxR)], [0, 1, 2]);
+  // 같은 모양을 가로 글씨로: 옆줄 없이 모두 가로 칸, 그래도 옆줄은 한 색
+  const mh = FM.Poster.model(L, {}, { text: 'h' });
+  assert.ok(mh.items.every((it) => it.dir === 'h' && !it.side));
+  const sideFills = new Set(mh.items.filter((it) => it.r > minR && it.r < maxR).map((it) => it.fill));
+  assert.strictEqual(sideFills.size, 1);
+});
+
+test('세로 글씨: 긴 이름은 두 줄(띄어쓰기 우선), 짧은 이름은 한 줄', () => {
+  assert.deepStrictEqual(FM.Poster.splitName('박하늘 섬진강다슬기').map((g) => g.join('')), ['박하늘', '섬진강다슬기']);
+  assert.deepStrictEqual(FM.Poster.splitName('햇살대추농원초록나라팜').map((g) => g.join('')), ['햇살대추농원', '초록나라팜']);
+  const short = FM.Poster.fitVertical('들꽃향기', 52, 160, 26);
+  assert.strictEqual(short.cols.length, 1);
+  assert.strictEqual(short.fs, 26);
+  const long = FM.Poster.fitVertical('햇살대추농원초록나라팜', 52, 160, 26);
+  assert.strictEqual(long.cols.length, 2);
+  assert.ok(long.fs > 160 / 11.5, '두 줄이 한 줄보다 크게');
+  assert.deepStrictEqual(FM.Poster.graphemes('한강 🌉'), ['한', '강', ' ', '🌉']);
 });

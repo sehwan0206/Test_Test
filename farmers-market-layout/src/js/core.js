@@ -159,6 +159,22 @@
     const t = String(s || '').replace(CORP_RE, '').replace(/\s+/g, ' ').trim();
     return t || String(s || '').trim();
   };
+  /**
+   * 배치도(게시용 그림)에 쓰는 짧은 이름.
+   * 직접 적은 「표시 이름」(alias)이 있으면 그것, 없으면 법인 표기를 뺀 이름.
+   * paren=true 이면 「한빛인터내셔널(들꽃향기)」처럼 괄호 안 상호를 씀 → 「들꽃향기」
+   */
+  FM.displayName = function (f, paren) {
+    if (!f) return '';
+    const alias = String(f.alias || '').trim();
+    if (alias) return alias;
+    const t = FM.shortName(f.name);
+    if (paren !== false) {
+      const m = t.match(/^(.+?)\s*[(（\[]\s*([^()（）\[\]]+?)\s*[)）\]]\s*$/);
+      if (m && Array.from(m[2].replace(/\s/g, '')).length >= 2) return m[2];
+    }
+    return t;
+  };
   FM.phoneDigits = (s) => String(s || '').replace(/\D/g, '');
   FM.isSameFarm = function (a, b) {
     const pa = FM.phoneDigits(a.phone);
@@ -217,6 +233,7 @@
         place: '',
         memo: '',
         power: '', // 전력 사용량 kW ('' = 모름/적음)
+        alias: '', // 배치도에 보일 이름 (비우면 농가명에서 자동)
         tags: [], // 원재료
         forms: [], // 제품 형태
         tagsManual: false,
@@ -357,13 +374,40 @@
   // ---------------------------------------------------------------------------
   // 배치(layout) 헬퍼
   // ---------------------------------------------------------------------------
+  // 부스 번호 매기는 순서
+  FM.NUMBERING = [
+    ['row', '가로 →', '위 줄부터, 줄마다 왼쪽 → 오른쪽'],
+    ['rowR', '가로 ←', '위 줄부터, 줄마다 오른쪽 → 왼쪽'],
+    ['snake', '지그재그', '위 줄부터, 줄마다 방향을 바꿔 걷는 순서대로 (→ ← →)'],
+    ['col', '세로 ↓', '왼쪽 열부터, 열마다 위 → 아래'],
+    ['colR', '세로 ↓ (오른쪽부터)', '오른쪽 열부터, 열마다 위 → 아래'],
+  ];
   FM.boothKeys = function (L) {
     const keys = Object.keys(L.cells).filter((k) => L.cells[k].t === 'b');
-    const byCol = L.numbering === 'col';
+    const mode = L.numbering || 'row';
+    const rc = {};
+    for (const k of keys) rc[k] = FM.parseKey(k);
+    let rowRank = null;
+    if (mode === 'snake') {
+      // 부스가 있는 줄만 세어 홀/짝 줄의 방향을 바꿈
+      rowRank = {};
+      [...new Set(keys.map((k) => rc[k][0]))].sort((a, b) => a - b).forEach((r, i) => (rowRank[r] = i));
+    }
     keys.sort((a, b) => {
-      const [ra, ca] = FM.parseKey(a);
-      const [rb, cb] = FM.parseKey(b);
-      return byCol ? ca - cb || ra - rb : ra - rb || ca - cb;
+      const [ra, ca] = rc[a];
+      const [rb, cb] = rc[b];
+      switch (mode) {
+        case 'col':
+          return ca - cb || ra - rb;
+        case 'colR':
+          return cb - ca || ra - rb;
+        case 'rowR':
+          return ra - rb || cb - ca;
+        case 'snake':
+          return ra - rb || (rowRank[ra] % 2 ? cb - ca : ca - cb);
+        default:
+          return ra - rb || ca - cb;
+      }
     });
     return keys;
   };

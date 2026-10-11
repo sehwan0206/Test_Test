@@ -67,7 +67,7 @@
       h(
         'div',
         { class: 'lv-tools' },
-        h('button', { class: 'btn small', title: '지금 날짜의 배치도를 그림(PNG) 파일로 저장해요', onclick: () => savePng() }, '🖼 그림 저장'),
+        h('button', { class: 'btn small', title: '제목·줄 색·상호명이 들어간 게시용 배치도 그림(PNG)을 만들어요', onclick: () => FM.Poster.open(C.ev, C.day) }, '🖼 그림 만들기'),
         h('button', { class: 'btn small', title: '되돌리기 (Ctrl+Z)', onclick: undo }, '↶ 되돌리기'),
         h('button', { class: 'btn small', title: '다시 하기 (Ctrl+Y)', onclick: redo }, '↷'),
         h(
@@ -213,8 +213,8 @@
             'div',
             { class: 'done-banner' },
             h('b', null, '🎉 배치 완료!'),
-            h('button', { class: 'btn small primary', onclick: () => savePng(false) }, '🖼 그림 저장'),
-            h('button', { class: 'btn small', onclick: () => savePng(true) }, '🖼 검수 선 넣어 저장'),
+            h('button', { class: 'btn small primary', title: '제목·줄 색·상호명이 들어간 게시용 그림', onclick: () => FM.Poster.open(C.ev, C.day) }, '🖼 배치도 그림 만들기'),
+            h('button', { class: 'btn small', title: '유사 품목 검수 선·전력 표시가 들어간 확인용 그림', onclick: () => savePng(true) }, '🔍 검수용 그림'),
             h('button', { class: 'btn small', onclick: () => App().exportExcel(C.ev, baseName()) }, '📊 엑셀 저장'),
             h('button', { class: 'btn small ghost', onclick: () => App().printDay(C.ev, C.day) }, '🖨 인쇄')
           )
@@ -1045,15 +1045,13 @@
         '부스 번호 순서',
         h(
           'div',
-          { class: 'segs' },
-          [
-            ['row', '가로 먼저 →'],
-            ['col', '세로 먼저 ↓'],
-          ].map(([v, t]) =>
+          { class: 'segs wrap' },
+          FM.NUMBERING.map(([v, t, tip]) =>
             h(
               'button',
               {
                 class: 'seg' + ((L.numbering || 'row') === v ? ' on' : ''),
+                title: tip,
                 onclick: () => {
                   L.numbering = v;
                   changed();

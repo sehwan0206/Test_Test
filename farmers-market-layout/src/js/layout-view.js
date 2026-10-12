@@ -276,7 +276,8 @@
         )
       );
     }
-    if (venue.template)
+    const vtpl = FM.venueTemplate(venue);
+    if (vtpl)
       btns.push(
         h(
           'button',
@@ -284,7 +285,7 @@
             class: 'btn small',
             onclick: () => {
               pushHistory();
-              Object.assign(L, { rows: venue.template.rows, cols: venue.template.cols, cells: FM.clone(venue.template.cells), numbering: venue.template.numbering || 'row' });
+              Object.assign(L, { rows: vtpl.rows, cols: vtpl.cols, cells: FM.clone(vtpl.cells), numbering: vtpl.numbering || 'row' });
               changed();
             },
           },
@@ -336,7 +337,14 @@
     const [r, c] = FM.parseKey(key);
     const style = { left: cellX(c) + 'px', top: cellY(r) + 'px', width: CW() + 'px', height: CH() + 'px' };
     if (!cell) return h('div', { class: 'cell off', 'data-k': key, style });
-    if (cell.t === 'l') return h('div', { class: 'cell label', 'data-k': key, style, title: cell.label }, h('span', null, cell.label));
+    if (cell.t === 'l') {
+      // 같은 이름이 이어진 시설(통로 띠 등)은 첫 칸에만 이름
+      const same = (x) => x && x.t === 'l' && x.label === cell.label;
+      const cont = same(L.cells[FM.cellKey(r, c - 1)]) || same(L.cells[FM.cellKey(r - 1, c)]);
+      const run = !cont && same(L.cells[FM.cellKey(r, c + 1)]);
+      const open = FM.isOpenLabel(cell.label);
+      return h('div', { class: 'cell label' + (open ? ' open' : '') + (cont ? ' cont' : '') + (run ? ' run' : ''), 'data-k': key, style, title: cell.label }, cont ? null : h('span', null, cell.label));
+    }
     const f = C.farmById[L.assign[key]];
     const u = ui();
     let cls = 'cell booth ' + (f ? 'filled' : 'empty');
@@ -863,7 +871,7 @@
               h(
                 'div',
                 { class: 'chips' },
-                ['입구', '무대', '운영본부', '화장실', '통로', '시식', '휴게', '주차장', '나무', '계단'].map((t) =>
+                ['입구', '출구', '관람객 통로', '야외무대', '무대', '운영본부', '화장실', '주차장', '시식', '휴게', '나무', '계단'].map((t) =>
                   h(
                     'button',
                     {
@@ -877,7 +885,7 @@
                   )
                 )
               ),
-              h('p', { class: 'muted small' }, '무대·입구 같은 시설은 부스 수에 들어가지 않아요. 위치를 알아보기 쉽게 표시만 해요.')
+              h('p', { class: 'muted small' }, '무대·입구 같은 시설은 부스 수에 들어가지 않아요. 같은 이름을 이어 칠하면 배치도 그림에서 하나의 띠(예: 관람객 통로)로 그려져요. 통로·입구·출구는 부스 앞이 트인 곳으로 봐요.')
             )
           : h('p', { class: 'muted small' }, u.brush === 'b' ? '빈 격자를 누르면 부스 칸이 생기고, 부스 칸을 다시 누르면 지워져요. 누른 채로 끌면 여러 칸을 한 번에 칠해요. 오른쪽·아래 끝까지 칠하면 격자가 자동으로 늘어나요.' : '누르거나 끌어서 칸을 지워요.')
       )
@@ -993,12 +1001,20 @@
       )
     );
 
-    const tpl = venue.template;
+    const tpl = FM.venueTemplate(venue);
     const tplCount = tpl ? Object.values(tpl.cells).filter((c) => c.t === 'b').length : 0;
     side.appendChild(
       section(
         `장소 기본형 · ${venue.short}`,
-        h('p', { class: 'muted small' }, tpl ? `저장된 기본형: 부스 ${tplCount}칸 (${tpl.rows}×${tpl.cols})` : '아직 저장된 기본형이 없어요. 장소 모양을 한 번 만들어 저장해 두면 다음 일정에서 바로 불러와요.'),
+        h(
+          'p',
+          { class: 'muted small' },
+          venue.template
+            ? `저장된 기본형: 부스 ${tplCount}칸 (${tpl.rows}×${tpl.cols})`
+            : tpl
+            ? `팀에서 쓰던 ${venue.name} 배치도 모양이 들어 있어요: 부스 ${tplCount}칸 + 통로·입구 등 시설. 불러와서 실제 농가 수에 맞게 칸을 더하거나 지우세요.`
+            : '아직 저장된 기본형이 없어요. 장소 모양을 한 번 만들어 저장해 두면 다음 일정에서 바로 불러와요.'
+        ),
         h(
           'div',
           { class: 'row gap wrap' },
@@ -1025,7 +1041,7 @@
               class: 'btn small',
               disabled: !Object.keys(L.cells).length,
               onclick: async () => {
-                if (tpl && !(await UI.confirm(`「${venue.name}」 기본형을 지금 모양으로 덮어쓸까요?`, { okText: '저장' }))) return;
+                if (venue.template && !(await UI.confirm(`「${venue.name}」 기본형을 지금 모양으로 덮어쓸까요?`, { okText: '저장' }))) return;
                 venue.template = { rows: L.rows, cols: L.cols, cells: FM.clone(L.cells), numbering: L.numbering || 'row' };
                 App().changed();
                 renderSide();

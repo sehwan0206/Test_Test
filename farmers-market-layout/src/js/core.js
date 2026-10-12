@@ -416,6 +416,66 @@
     FM.boothKeys(L).forEach((k, i) => (map[k] = i + 1));
     return map;
   };
+  /** 사람이 지나다니는 시설 칸(관람객 통로·입구·출구…) — 부스 앞이 막힌 것으로 보지 않음 */
+  FM.isOpenLabel = (label) => /통로|광장|입구|출구|출입|산책로/.test(String(label || ''));
+
+  // ---------------------------------------------------------------------------
+  // 장소 기본 모양 (팀에서 쓰던 실제 배치도를 옮긴 것 — 「기본형 불러오기」로 시작점으로 씀)
+  //   B = 부스, . = 빈칸, 그 밖의 글자 = 시설(아래 이름)
+  // ---------------------------------------------------------------------------
+  function shapeFromMap(map, names) {
+    const cells = {};
+    const OFF = 1;
+    map.forEach((line, r) =>
+      Array.from(line).forEach((ch, c) => {
+        if (ch === 'B') cells[FM.cellKey(r + OFF, c + OFF)] = { t: 'b' };
+        else if (names[ch]) cells[FM.cellKey(r + OFF, c + OFF)] = { t: 'l', label: names[ch] };
+      })
+    );
+    const rows = Math.max(FM.GRID.rows, map.length + OFF + FM.GRID.margin);
+    const cols = Math.max(FM.GRID.cols, Math.max(...map.map((l) => l.length)) + OFF + FM.GRID.margin);
+    const L = { rows, cols, cells, numbering: 'row' };
+    FM.autoDirections(L, 'all');
+    return L;
+  }
+  FM.VENUE_SHAPES = {
+    // 위 17+4 · 관람객 통로(양 끝 입구) · 아래 17+4 · 야외무대 (42칸)
+    yangcheon: () =>
+      shapeFromMap(
+        [
+          '.BBBBBBBBBBBBBBBBB.BBBB.',
+          'EAAAAAAAAAAAAAAAAAAAAAAE',
+          '.BBBBBBBBBBBBBBBBB.BBBB.',
+          '........................',
+          '...SSSSSSSSSSSSSSSS.....',
+        ],
+        { E: '입구', A: '관람객 통로', S: '야외무대' }
+      ),
+    // 노원기차마을 쪽 1칸 · 위 6칸 · 2열·3열 묶음 둘씩 · 오른쪽 세로 5칸 · 주차장 (32칸)
+    hwarangdae: () =>
+      shapeFromMap(
+        [
+          '.....B...',
+          'XNNNNNNNN',
+          '..BBBBBB.',
+          '........B',
+          '..BB.BBBB',
+          '..BB.BBBB',
+          '........B',
+          '..BB.BBBB',
+          '..BB.BBB.',
+          'PPPPPPPPP',
+        ],
+        { X: '출구', N: '노원기차마을', P: '주차장' }
+      ),
+  };
+  /** 장소 기본형: 직접 저장한 것 → 없으면 기본 모양 */
+  FM.venueTemplate = function (venue) {
+    if (!venue) return null;
+    if (venue.template) return venue.template;
+    return FM.VENUE_SHAPES[venue.id] ? FM.VENUE_SHAPES[venue.id]() : null;
+  };
+
   FM.attendingFarms = (ev, day) => ev.farms.filter((f) => f.days && f.days[day.id]);
 
   /** 부스가 아닌 칸·불참 농가·중복 배정을 정리 */
@@ -501,7 +561,7 @@
         let score;
         if (!inGrid(nr, nc)) score = -3;
         else if (isB(nr, nc)) score = -100;
-        else if (at(nr, nc)) score = -5; // 시설 칸
+        else if (at(nr, nc) && !FM.isOpenLabel(at(nr, nc).label)) score = -5; // 시설 칸 (통로·입구는 빈 칸처럼)
         else {
           score = 2;
           for (let s2 = 2; s2 <= 6; s2++) {
@@ -515,7 +575,7 @@
               score = 10 - s2; // 통로 건너 마주 보는 줄
               break;
             }
-            if (at(rr, cc)) break;
+            if (at(rr, cc) && !FM.isOpenLabel(at(rr, cc).label)) break;
           }
         }
         if (cell.dir === dir) score += 0.01;

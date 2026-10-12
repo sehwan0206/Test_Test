@@ -430,3 +430,111 @@ test('세로 글씨: 긴 이름은 두 줄(띄어쓰기 우선), 짧은 이름�
   assert.ok(long.fs > 160 / 11.5, '두 줄이 한 줄보다 크게');
   assert.deepStrictEqual(FM.Poster.graphemes('한강 🌉'), ['한', '강', ' ', '🌉']);
 });
+
+// ------------------------------------------------------ 장소별 형식 (양천·화랑대) ---
+test('장소 기본 모양: 양천 42칸은 관람객 통로 쪽을 보고, 저장한 기본형이 있으면 그것을 쓴다', () => {
+  const yc = FM.venueTemplate({ id: 'yangcheon' });
+  const booths = Object.entries(yc.cells).filter(([, c]) => c.t === 'b');
+  assert.strictEqual(booths.length, 42);
+  const aisleRow = FM.parseKey(Object.keys(yc.cells).find((k) => yc.cells[k].label === '관람객 통로'))[0];
+  for (const [k, c] of booths) assert.strictEqual(c.dir, FM.parseKey(k)[0] < aisleRow ? 'd' : 'u', k);
+  const hr = FM.venueTemplate({ id: 'hwarangdae' });
+  assert.strictEqual(Object.values(hr.cells).filter((c) => c.t === 'b').length, 32);
+  assert.deepStrictEqual([...new Set(Object.values(hr.cells).filter((c) => c.t === 'l').map((c) => c.label))].sort(), ['노원기차마을', '주차장', '출구'].sort());
+  const mine = { rows: 5, cols: 5, cells: { '1,1': { t: 'b' } } };
+  assert.strictEqual(FM.venueTemplate({ id: 'yangcheon', template: mine }), mine);
+  assert.strictEqual(FM.venueTemplate({ id: 'ttukseom' }), null);
+});
+
+test('부스 방향: 통로·입구 시설 칸은 트인 곳, 무대 같은 시설은 막힌 곳으로 본다', () => {
+  assert.ok(FM.isOpenLabel('관람객 통로') && FM.isOpenLabel('입구') && FM.isOpenLabel('출구'));
+  assert.ok(!FM.isOpenLabel('야외무대') && !FM.isOpenLabel('주차장'));
+  const mk = (label) => {
+    const L = FM.emptyLayout(10, 10);
+    for (let c = 1; c <= 4; c++) {
+      L.cells[FM.cellKey(3, c)] = { t: 'b' };
+      L.cells[FM.cellKey(4, c)] = { t: 'l', label };
+    }
+    FM.autoDirections(L, 'all');
+    return L.cells['3,2'].dir;
+  };
+  assert.strictEqual(mk('관람객 통로'), 'd');
+  assert.strictEqual(mk('야외무대'), 'u');
+});
+
+test('주말 합쳐서: 이틀 모두 같은 자리면 그대로, 한쪽 날만이면 「토」「일」, 다른 농가면 칸을 나눔', () => {
+  const sat = FM.newDay('2026-10-03', '13회차');
+  const sun = FM.newDay('2026-10-04', '14회차');
+  for (const d of [sat, sun]) for (let c = 1; c <= 4; c++) d.layout.cells[FM.cellKey(1, c)] = { t: 'b' };
+  const farms = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: '농가' + id, category: '채소류', days: {} }));
+  Object.assign(sat.layout.assign, { '1,1': 'a', '1,2': 'b', '1,3': 'c' });
+  Object.assign(sun.layout.assign, { '1,1': 'a', '1,3': 'd', '1,4': 'b' });
+  const ev = { id: 'e', title: '13,14회차', days: [sat, sun], farms };
+  const p = FM.Poster.plan(ev, sat, 'weekend');
+  assert.strictEqual(p.days.length, 2);
+  assert.deepStrictEqual(p.seats['1,1'].map((e) => e.badge), ['']);
+  assert.deepStrictEqual(p.seats['1,2'].map((e) => [e.farmId, e.badge]), [['b', '토']]);
+  assert.deepStrictEqual(p.seats['1,4'].map((e) => [e.farmId, e.badge]), [['b', '일']]);
+  assert.deepStrictEqual(p.seats['1,3'].map((e) => [e.farmId, e.badge]), [['c', '토'], ['d', '일']]);
+  assert.strictEqual(p.split, 1);
+  assert.strictEqual(p.holder, ev);
+  const m = FM.Poster.model(p.layout, Object.fromEntries(farms.map((f) => [f.id, f])), {}, p.seats);
+  assert.strictEqual(m.items.find((it) => it.key === '1,3').parts.length, 2);
+  // 일요일이 아직 배치 전이면 토요일만, 빠진 날을 알려줌
+  sun.layout.assign = {};
+  const p2 = FM.Poster.plan(ev, sat, 'weekend');
+  assert.deepStrictEqual(p2.days, [sat]);
+  assert.deepStrictEqual(p2.missing, [sun]);
+  assert.strictEqual(p2.seats['1,2'][0].badge, '');
+  // 이 날짜만
+  const p3 = FM.Poster.plan(ev, sat, 'day');
+  assert.strictEqual(p3.holder, sat);
+});
+
+test('그림 칸 배치: 같은 이름 시설 칸은 하나의 띠, 통로 줄은 넉넉한 띠 높이', () => {
+  const L = Object.assign(FM.emptyLayout(), FM.venueTemplate({ id: 'yangcheon' }));
+  const m = FM.Poster.model(L, {}, {});
+  const by = (n) => m.labels.filter((b) => b.name === n);
+  assert.strictEqual(by('관람객 통로').length, 1);
+  assert.strictEqual(by('입구').length, 2);
+  assert.strictEqual(by('야외무대').length, 1);
+  const aisle = by('관람객 통로')[0];
+  assert.ok(aisle.full && aisle.open && aisle.dir === 'h');
+  assert.strictEqual(aisle.h, Math.round(m.ch * 0.38));
+  assert.ok(by('입구').every((b) => b.dir === 'v'), '입구는 좁은 칸에 세로 글씨');
+  const stage = by('야외무대')[0];
+  assert.ok(stage.w > m.cw * 10);
+  assert.strictEqual(FM.Poster.labelStyle('입구', {}).fill, '#C0392B');
+  assert.strictEqual(FM.Poster.labelStyle('노원기차마을', { labelColors: { 노원기차마을: '#123456' } }).fill, '#123456');
+});
+
+test('제목: 장소 기본 제목의 {날짜}는 주말이면 「2026. 10. 3 - 4」', () => {
+  const D = (date) => ({ date });
+  assert.strictEqual(FM.Poster.dateText([D('2026-10-03'), D('2026-10-04')]).full, '2026. 10. 3 - 4');
+  assert.strictEqual(FM.Poster.dateText([D('2026-10-31'), D('2026-11-01')]).full, '2026. 10. 31 - 11. 1');
+  assert.strictEqual(FM.Poster.dateText([D('2026-10-03')]).full, '2026. 10. 3(토)');
+  const venue = { id: 'yangcheon', name: '양천파리공원' };
+  const o = FM.Poster.options(venue);
+  assert.strictEqual(FM.Poster.fillTitle(o.titleTpl, venue, { title: '13,14회차' }, [D('2026-10-03'), D('2026-10-04')]), '양천 파리공원 농부의 시장 부스 배치도 | 2026. 10. 3 - 4');
+  assert.strictEqual(FM.Poster.fillTitle(FM.Poster.DEFAULTS.titleTpl, { name: '뚝섬한강공원' }, {}, [D('2026-10-10')]), '뚝섬한강공원 배치도(10.10)');
+});
+
+test('장소별 기본 형식: 양천은 번호 상자·전력 숫자, 화랑대는 가로 칸·노랑, 저장한 설정이 우선', () => {
+  const yc = FM.Poster.options({ id: 'yangcheon' });
+  assert.strictEqual(yc.noStyle, 'box');
+  assert.strictEqual(yc.showPower, true);
+  assert.strictEqual(yc.titleStyle, 'bar');
+  assert.strictEqual(yc.scope, 'weekend');
+  const hr = FM.Poster.options({ id: 'hwarangdae' });
+  assert.strictEqual(hr.text, 'h');
+  assert.strictEqual(hr.colorBy, 'one');
+  assert.strictEqual(hr.labelColors.출구, '#BF9000');
+  const tt = FM.Poster.options({ id: 'ttukseom' });
+  assert.strictEqual(tt.bands.l, '한강방향 🌉');
+  const saved = FM.Poster.options({ id: 'yangcheon', posterOpts: { noStyle: 'attach', showNo: true, labelColors: { 입구: '#000000' } } });
+  assert.strictEqual(saved.noStyle, 'attach');
+  assert.strictEqual(saved.labelColors.입구, '#000000');
+  assert.strictEqual(FM.Poster.options({ id: 'x', posterOpts: { showNo: false } }).noStyle, 'none'); // 예전 설정
+  assert.strictEqual(FM.Poster.region({ sido: '강원', sigungu: '인제군' }), '강원 인제');
+  assert.strictEqual(FM.Poster.region({ sido: '서울', sigungu: '중구' }), '서울 중구');
+});

@@ -384,7 +384,7 @@
           days: draft.days.map((d) => FM.newDay(d.date, d.round)),
           farms: [],
         };
-        const tpl = App.venue(nev.venueId).template;
+        const tpl = FM.venueTemplate(App.venue(nev.venueId));
         if (tpl) nev.days.forEach((d) => Object.assign(d.layout, FM.clone(tpl)));
         App.state.events.push(nev);
         m.close(true);
@@ -424,7 +424,7 @@
           nd.layout.cols = near.layout.cols;
           nd.layout.cells = FM.clone(near.layout.cells);
           nd.layout.numbering = near.layout.numbering;
-        } else if (App.venue(ev.venueId).template) Object.assign(nd.layout, FM.clone(App.venue(ev.venueId).template));
+        } else if (FM.venueTemplate(App.venue(ev.venueId))) Object.assign(nd.layout, FM.clone(FM.venueTemplate(App.venue(ev.venueId))));
         if (near && ev.farms.length) {
           const cnt = ev.farms.filter((f) => f.days[near.id]).length;
           const ok = await UI.confirm(`새로 추가한 ${FM.fmtDay(nd.date)}의 참여 농가를 ${FM.fmtDay(near.date)}과(와) 같게 체크할까요? (${cnt}곳)\n나중에 명단에서 바꿀 수 있어요.`, { okText: '같게 체크', cancelText: '비워 두기' });
@@ -1438,7 +1438,7 @@
         card(
           '🖼',
           '배치도 그림 만들기 (게시용)',
-          '맨 위 제목, 배치 모양 그대로 상호명(세로 글씨), 줄마다 다른 색, 부스 번호가 들어간 흰 바탕 그림이에요. 미리 보면서 제목·색·방향 표시를 고르고 PNG로 저장해요.',
+          '장소마다 팀에서 쓰던 형식으로 그려요(양천: 초록 제목 띠·번호 상자·전력 숫자 / 화랑대: 노랑 가로 칸 / 뚝섬: 세로 글씨·방향 띠). 「간단히(상호명)」·「자세히(품목·지역)」, 「주말 합쳐서(토·일 표시)」를 고르고 PNG로 저장해요.',
           ev.days.map((d) => h('button', { class: 'btn primary', onclick: () => FM.Poster.open(ev, d) }, `🖼 ${FM.weekday(d.date)} ${FM.fmtDay(d.date)}`))
         ),
         card(
@@ -1608,7 +1608,9 @@
           'ul',
           null,
           h('li', null, '엑셀(색깔 배치도), 그림(PNG), 인쇄/PDF로 내보낼 수 있어요.'),
-          h('li', null, '🖼 배치도 그림 만들기(게시용): 맨 위 제목을 직접 적고, 배치 모양 그대로 상호명(세로 글씨)·줄마다 다른 색·상호명에 붙은 부스 번호가 들어간 흰 바탕 그림을 만들어요. 「한강방향 🌉」 같은 방향 표시 띠도 넣을 수 있고(장소마다 기억), 그림에 보일 이름은 창 아래 「✏️ 그림에 보일 이름 고치기」나 농가 수정 창에서 고쳐요.'),
+          h('li', null, '🖼 배치도 그림 만들기(게시용): 장소마다 팀에서 쓰던 형식이 기본이에요 — 양천은 초록 제목 띠·번호 상자·전력(kW) 빨간 숫자, 화랑대는 노랑 가로 칸, 뚝섬은 세로 글씨와 「한강방향 🌉」 띠. 「간단히」는 상호명만, 「자세히」는 상호명·품목·지역 카드예요.'),
+          h('li', null, '「주말 합쳐서」를 고르면 토·일을 한 장에 그리고, 한쪽 날만 오는 농가에 「토」「일」 표시를 붙여요. 관람객 통로·입구·야외무대 같은 시설은 ② 칸 만들기의 「🏷 시설」 붓으로 같은 이름을 이어 칠하면 하나의 띠로 그려져요(양천·화랑대는 「기본형 불러오기」에 이미 들어 있어요).'),
+          h('li', null, '그림에 보일 이름은 창 아래 「✏️ 그림에 보일 이름 고치기」나 농가 수정 창에서 고쳐요.'),
           h('li', null, '🔍 검수용 그림: 품목군 색·부스 방향·전력 구역·검수 선이 들어간 확인용 그림이에요.'),
           h('li', null, h('b', null, '팀원과 나누기: 「💾 공유용 파일로 저장」'), ' → 생긴 HTML 파일을 보내면 받은 사람은 더블클릭으로 같은 작업을 이어서 해요.')
         ),
